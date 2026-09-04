@@ -1,21 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { COURSES0, VERTICALS } from "@/lib/fixtures";
+import { VERTICALS } from "@/lib/fixtures";
 import { formatARS } from "@/lib/format";
 import { Reveal } from "@/components/ui/Reveal";
+import type { Course } from "@/lib/types";
 
 const FILTERS = ["Todas", ...VERTICALS] as const;
 
-export function Catalogo() {
+export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Todas");
 
   const courses = useMemo(
     () =>
       filter === "Todas"
-        ? COURSES0
-        : COURSES0.filter((c) => c.vertical === filter),
-    [filter]
+        ? allCourses
+        : allCourses.filter((c) => c.vertical === filter),
+    [filter, allCourses]
   );
 
   return (
@@ -54,6 +55,11 @@ export function Catalogo() {
           className="mt-px grid gap-px bg-[var(--line)]"
           key={filter}
         >
+          {courses.length === 0 ? (
+            <div className="bg-[var(--surface)] px-6 py-16 text-center text-[14px] text-[var(--dim)]">
+              Todavía no hay cursos cargados en esta vertical.
+            </div>
+          ) : (
           <div
             className="grid gap-px bg-[var(--line)]"
             style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
@@ -108,6 +114,7 @@ export function Catalogo() {
               </article>
             ))}
           </div>
+          )}
         </Reveal>
       </div>
     </section>

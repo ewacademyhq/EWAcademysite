@@ -6,15 +6,18 @@ import { Modalidad } from "@/components/landing/Modalidad";
 import { Pagos } from "@/components/landing/Pagos";
 import { ClosingPoster } from "@/components/landing/ClosingPoster";
 import { Footer } from "@/components/landing/Footer";
+import { getCourses } from "@/lib/data/courses";
 
-export default function Home() {
+export default async function Home() {
+  const courses = await getCourses();
+
   return (
     <>
       <Header />
       <main>
         <Hero />
         <BrandStrip />
-        <Catalogo />
+        <Catalogo courses={courses} />
         <Modalidad />
         <Pagos />
         <ClosingPoster />

@@ -1,6 +1,7 @@
 export type Vertical = "Ciberseguridad" | "QA" | "IA" | "Videojuegos";
 export type Modalidad = "cohorte" | "continuo";
 export type PagoTipo = "pct" | "fijo";
+export type MoraTipo = "ninguno" | "pct" | "fijo";
 
 export interface Course {
   code: string;
@@ -17,7 +18,7 @@ export interface Course {
   comision: number;
   vendidos: number;
   vistas: number;
-  moraTipo?: "ninguno" | "pct" | "fijo";
+  moraTipo?: MoraTipo;
   moraValor?: number;
 }
 
