@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #131313;
+  --bg2: #0e0e0e;
+  --surface: #1e1e1e;
+  --surface2: #262626;
+  --elev: #2a2a2a;
+  --line: #333331;
+  --line2: #474744;
+  --text: #efebe7;
+  --dim: #a9a39b;
+  --faint: #7c766e;
+  --accent: #ef7828;
+  --accent-600: #d9631a;
+  --accent-ink: #141414;
+  --accent-soft: rgba(239, 120, 40, 0.14);
+  --accent-line: rgba(239, 120, 40, 0.42);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, 0.13);
+  --danger-line: rgba(229, 72, 77, 0.4);
+  --good: #4ba37b;
+  --good-soft: rgba(75, 163, 123, 0.14);
+  --shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
+  --grid-line: rgba(239, 235, 231, 0.05);
+
+  --font-nippo: "Nippo", system-ui, sans-serif;
+  --font-humane: "Humane", "Big Shoulders Display", "Arial Narrow", sans-serif;
+}
+
+[data-theme="light"] {
+  --bg: #efebe7;
+  --bg2: #e6e1dc;
+  --surface: #ffffff;
+  --surface2: #f6f4f1;
+  --elev: #ffffff;
+  --line: #ddd7d0;
+  --line2: #c3bcb3;
+  --text: #1e1e1e;
+  --dim: #5c564f;
+  --faint: #857e76;
+  --accent: #d9631a;
+  --accent-600: #b84f10;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(239, 120, 40, 0.14);
+  --accent-line: rgba(217, 99, 26, 0.4);
+  --danger: #c5292e;
+  --danger-soft: rgba(197, 41, 46, 0.09);
+  --danger-line: rgba(197, 41, 46, 0.3);
+  --good: #2f7d59;
+  --good-soft: rgba(47, 125, 89, 0.12);
+  --shadow: 0 16px 34px rgba(30, 30, 30, 0.14);
+  --grid-line: rgba(30, 30, 30, 0.05);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg2: var(--bg2);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-elev: var(--elev);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-text: var(--text);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-600: var(--accent-600);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --font-nippo: var(--font-nippo);
+  --font-humane: var(--font-humane);
+}
+
+* {
+  border-radius: 0 !important;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-nippo);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+[data-reveal].is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
