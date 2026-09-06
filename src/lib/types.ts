@@ -24,6 +24,17 @@ export interface Course {
   graciaDias?: number;
   /** Fecha de fin de cohorte, dd/mm/yyyy — null en cursos autogestionados. */
   fechaFin?: string | null;
+  /** Link real a la carpeta de Drive del curso, lo fija el propio docente. */
+  driveFolderUrl?: string | null;
+}
+
+export interface CourseSession {
+  id: number;
+  courseCode: string;
+  titulo: string;
+  /** ISO 8601 completo (fecha + hora). */
+  fecha: string;
+  meetUrl: string;
 }
 
 export type EstadoMatricula = "activa" | "mora" | "pendiente" | "finalizada" | "deuda";

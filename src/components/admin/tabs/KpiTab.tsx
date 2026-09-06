@@ -1,6 +1,9 @@
 import type { Course, Enrollment } from "@/lib/types";
 import { formatShort } from "@/lib/format";
 
+// La facturación mensual histórica (últimos 6 meses) todavía no tiene una
+// consulta real detrás — necesitaría agrupar `payments` por período, que no
+// era parte del alcance de Fase 7 (tracking de vistas). Ver IMPLEMENTATION_PLAN.md.
 const REVENUE: [string, number][] = [
   ["Mar", 9.8],
   ["Abr", 11.1],
@@ -11,13 +14,6 @@ const REVENUE: [string, number][] = [
 ];
 const MAX_REVENUE = 16.2;
 
-const FUNNEL: [string, number][] = [
-  ["Vistas de ficha de curso", 21150],
-  ["Matriculaciones iniciadas", 412],
-  ["Pagos acreditados", 91],
-  ["Canceladas / abandonadas", 34],
-];
-
 export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollment[] }) {
   const activas = enroll.filter((e) => e.estado === "activa").length;
   const enMora = enroll.filter((e) => e.estado === "mora");
@@ -27,12 +23,24 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
   const maxSold = Math.max(0, ...courses.map((c) => c.vendidos));
   const verticales = new Set(courses.map((c) => c.vertical)).size;
 
+  const totalVistas = courses.reduce((a, c) => a + c.vistas, 0);
+  // "Acreditado" = la matrícula pasó por al menos un pago real; una que
+  // sigue en 'pendiente' todavía no pagó nada.
+  const pagosAcreditados = enroll.filter((e) => e.estado !== "pendiente").length;
+  const conversion = totalVistas ? (pagosAcreditados / totalVistas) * 100 : 0;
+
   const tiles = [
     { label: "Facturación del mes", value: formatShort(ingresoMes * 12), delta: "+8,4% vs. julio", color: "var(--good)", mark: "var(--accent)" },
     { label: "Verticales activas", value: String(verticales), delta: `${courses.length} cursos publicados`, color: "var(--dim)", mark: "var(--accent)" },
     { label: "Matrículas activas", value: String(activas), delta: `${enroll.length} matrículas totales`, color: "var(--dim)", mark: "var(--accent)" },
     { label: "Tasa de mora", value: `${enroll.length ? Math.round((enMora.length / enroll.length) * 100) : 0}%`, delta: `${enMora.length} alumnos pausados`, color: "var(--danger)", mark: "var(--danger)" },
-    { label: "Conversión visita → pago", value: "0,43%", delta: "91 pagos de 21.150 vistas", color: "var(--dim)", mark: "var(--accent)" },
+    {
+      label: "Conversión visita → pago",
+      value: `${conversion.toFixed(2).replace(".", ",")}%`,
+      delta: `${pagosAcreditados} pagos de ${totalVistas.toLocaleString("es-AR")} vistas`,
+      color: "var(--dim)",
+      mark: "var(--accent)",
+    },
   ];
 
   const topSold = [...courses]
@@ -44,11 +52,21 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
       w: maxSold ? Math.round((c.vendidos / maxSold) * 100) : 0,
     }));
 
+  // Embudo real: vistas de ficha (courses.vistas, Fase 7), matriculaciones
+  // (toda fila de `enrollments` alguna vez creada), pagos acreditados (la
+  // matrícula dejó de estar 'pendiente') y las que quedaron sin pagar nunca.
+  const FUNNEL: [string, number][] = [
+    ["Vistas de ficha de curso", totalVistas],
+    ["Matriculaciones iniciadas", enroll.length],
+    ["Pagos acreditados", pagosAcreditados],
+    ["Sin pagar todavía", enroll.length - pagosAcreditados],
+  ];
+  const funnelBase = FUNNEL[0][1] || 1;
   const funnel = FUNNEL.map(([label, n]) => ({
     label,
     n: n.toLocaleString("es-AR"),
-    w: Math.max(3, Math.round((n / FUNNEL[0][1]) * 100)),
-    pct: ((n / FUNNEL[0][1]) * 100).toFixed(1).replace(".", ",") + "%",
+    w: Math.max(3, Math.round((n / funnelBase) * 100)),
+    pct: ((n / funnelBase) * 100).toFixed(1).replace(".", ",") + "%",
   }));
 
   const revenue = REVENUE.map(([mes, valor]) => ({
@@ -141,8 +159,10 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
           ))}
         </div>
         <p className="mt-5 text-[12px] leading-[1.5] text-[var(--faint)]">
-          Se cuenta como cancelada la matrícula iniciada que no acreditó pago
-          en 7 días, más las bajas voluntarias del mes.
+          &quot;Sin pagar todavía&quot; son matrículas creadas que nunca
+          llegaron a acreditar un primer pago (quedaron en pendiente) — no
+          distingue todavía entre las que van a pagar pronto y las
+          efectivamente abandonadas.
         </p>
       </div>
 
@@ -170,13 +190,8 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
       </div>
 
       <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
-            Cursos más consultados
-          </div>
-          <span className="border border-[var(--accent)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[.08em] text-[var(--accent)]">
-            Requiere tracking
-          </span>
+        <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
+          Cursos más consultados
         </div>
         <div className="mt-4 flex flex-col gap-3">
           {topViewed.map((c) => (
@@ -190,8 +205,9 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
           ))}
         </div>
         <p className="mt-4 text-[12px] leading-[1.5] text-[var(--faint)]">
-          Datos de muestra. En producción salen del evento de vista de ficha
-          de curso, atribuido a la matrícula si convierte.
+          Vistas reales de la ficha de checkout de cada curso (Fase 7). La
+          conversión es matrículas vendidas / vistas — todavía no distingue
+          si la matrícula se atribuye a esa visita puntual.
         </p>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Course, Enrollment } from "@/lib/types";
+import type { Course, CourseSession, Enrollment } from "@/lib/types";
 import type { ModuleRow } from "@/lib/data/mycourse";
 import { createClient } from "@/lib/supabase/client";
 import { BackLink } from "@/components/ui/BackLink";
@@ -27,11 +27,13 @@ export function CursoClient({
   enrollment,
   modules,
   progress,
+  nextSession,
 }: {
   course: Course;
   enrollment: Enrollment;
   modules: ModuleRow[];
   progress: Record<number, string>;
+  nextSession: CourseSession | null;
 }) {
   const [toast, setToast] = useState<string | null>(null);
   const [progressState, setProgressState] = useState(progress);
@@ -99,12 +101,20 @@ export function CursoClient({
             {course.titulo.split(/\s*[—:]\s*/).pop()}
           </h1>
         </div>
-        <a
-          href="#"
-          className="mt-2 text-[13px] font-medium tracking-[.06em] text-[var(--text)] hover:text-[var(--accent)]"
-        >
-          Carpeta de Drive del curso ↗
-        </a>
+        {course.driveFolderUrl ? (
+          <a
+            href={course.driveFolderUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 text-[13px] font-medium tracking-[.06em] text-[var(--text)] hover:text-[var(--accent)]"
+          >
+            Carpeta de Drive del curso ↗
+          </a>
+        ) : (
+          <span className="mt-2 text-[13px] text-[var(--faint)]">
+            Todavía no hay una carpeta de Drive vinculada
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-5 px-[34px] py-6 lg:grid-cols-[1.6fr_.85fr] lg:items-start">
@@ -114,15 +124,35 @@ export function CursoClient({
               En vivo · Próxima
             </div>
             <h2 className="mt-2 text-[19px] font-medium">
-              Clase en vivo — {course.titulo.split(/\s*[—:]\s*/)[0]}
+              {nextSession ? nextSession.titulo : `Clase en vivo — ${course.titulo.split(/\s*[—:]\s*/)[0]}`}
             </h2>
-            <p className="mt-1 text-[13.5px] opacity-90">A confirmar · Google Meet</p>
-            <button
-              onClick={() => flash("Abriendo Google Meet…")}
-              className="mt-5 inline-flex h-11 items-center bg-[var(--accent-ink)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-opacity hover:opacity-85"
-            >
-              Entrar a la clase
-            </button>
+            <p className="mt-1 text-[13.5px] opacity-90">
+              {nextSession
+                ? `${new Date(nextSession.fecha).toLocaleString("es-AR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })} · Google Meet`
+                : "Sin clase agendada todavía"}
+            </p>
+            {nextSession?.meetUrl ? (
+              <a
+                href={nextSession.meetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex h-11 items-center bg-[var(--accent-ink)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-opacity hover:opacity-85"
+              >
+                Entrar a la clase
+              </a>
+            ) : (
+              <button
+                disabled
+                className="mt-5 inline-flex h-11 cursor-not-allowed items-center bg-[var(--accent-ink)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] opacity-60"
+              >
+                {nextSession ? "Sin link de Meet todavía" : "Sin clase agendada"}
+              </button>
+            )}
           </div>
 
           <div className="border border-[var(--line)] bg-[var(--surface)]">

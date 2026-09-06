@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getCourseByCode } from "@/lib/data/courses";
+import { getCourseByCode, getUpcomingSession } from "@/lib/data/courses";
 import { getMyEnrollment, getCourseModules, getMyModuleProgress } from "@/lib/data/mycourse";
 import { AppShell } from "@/components/shell/AppShell";
 import { CursoClient } from "@/components/curso/CursoClient";
@@ -23,14 +23,21 @@ export default async function CursoPage({
 
   if (!course || !enrollment) notFound();
 
-  const [modules, progress] = await Promise.all([
+  const [modules, progress, nextSession] = await Promise.all([
     getCourseModules(upperCode),
     getMyModuleProgress(enrollment.id),
+    getUpcomingSession(upperCode),
   ]);
 
   return (
     <AppShell role="alumno" defaultCourseCode={upperCode}>
-      <CursoClient course={course} enrollment={enrollment} modules={modules} progress={progress} />
+      <CursoClient
+        course={course}
+        enrollment={enrollment}
+        modules={modules}
+        progress={progress}
+        nextSession={nextSession}
+      />
     </AppShell>
   );
 }

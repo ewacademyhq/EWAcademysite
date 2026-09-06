@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isoToDMY, initials } from "@/lib/date";
 import type {
   Course,
+  CourseSession,
   Enrollment,
   EstadoMatricula,
   MoraTipo,
@@ -27,6 +28,7 @@ interface DocenteCourseRow {
   mora_valor: number;
   vendidos: number;
   vistas: number;
+  drive_folder_url: string | null;
 }
 
 function mapCourseRow(row: DocenteCourseRow, docente: string): Course {
@@ -47,11 +49,12 @@ function mapCourseRow(row: DocenteCourseRow, docente: string): Course {
     vistas: row.vistas,
     moraTipo: row.mora_tipo,
     moraValor: Number(row.mora_valor),
+    driveFolderUrl: row.drive_folder_url,
   };
 }
 
 const COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, vendidos, vistas";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, vendidos, vistas, drive_folder_url";
 
 /** Cursos a cargo del docente autenticado (RLS de courses ya es de lectura pública). */
 export async function getMyTeachingCourses(teacherId: string, teacherNombre: string): Promise<Course[]> {
@@ -167,4 +170,37 @@ export async function getMyReceiptQueue(courseCodes: string[]): Promise<Receipt[
         archivo: row.archivo_url,
       };
     });
+}
+
+interface CourseSessionRow {
+  id: number;
+  course_code: string;
+  titulo: string;
+  fecha: string;
+  meet_url: string;
+}
+
+function mapSessionRow(row: CourseSessionRow): CourseSession {
+  return { id: row.id, courseCode: row.course_code, titulo: row.titulo, fecha: row.fecha, meetUrl: row.meet_url };
+}
+
+/**
+ * Próximas sesiones en vivo de los cursos del docente autenticado (RLS de
+ * `course_sessions` ya limita la escritura a sus propios cursos; acá además
+ * filtramos por fecha futura, igual que hace `getUpcomingSession` del lado
+ * del alumno).
+ */
+export async function getMyUpcomingSessions(courseCodes: string[]): Promise<CourseSession[]> {
+  if (courseCodes.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("course_sessions")
+    .select("id, course_code, titulo, fecha, meet_url")
+    .in("course_code", courseCodes)
+    .gte("fecha", new Date().toISOString())
+    .order("fecha", { ascending: true });
+
+  if (error) throw error;
+  return (data as CourseSessionRow[]).map(mapSessionRow);
 }
