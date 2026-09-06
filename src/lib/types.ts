@@ -21,6 +21,9 @@ export interface Course {
   vistas: number;
   moraTipo?: MoraTipo;
   moraValor?: number;
+  graciaDias?: number;
+  /** Fecha de fin de cohorte, dd/mm/yyyy — null en cursos autogestionados. */
+  fechaFin?: string | null;
 }
 
 export type EstadoMatricula = "activa" | "mora" | "pendiente" | "finalizada" | "deuda";

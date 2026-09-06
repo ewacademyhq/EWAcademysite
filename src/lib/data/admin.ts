@@ -24,6 +24,7 @@ interface AdminCourseRow {
   descripcion: string;
   precio: number;
   fecha_inicio: string | null;
+  fecha_fin: string | null;
   duracion: string;
   docente_id: string | null;
   pago_tipo: PagoTipo;
@@ -31,6 +32,7 @@ interface AdminCourseRow {
   comision: number;
   mora_tipo: MoraTipo;
   mora_valor: number;
+  gracia_dias: number;
   vendidos: number;
   vistas: number;
   docente: { nombre: string } | { nombre: string }[] | null;
@@ -61,11 +63,13 @@ function mapCourseRow(row: AdminCourseRow): Course {
     vistas: row.vistas,
     moraTipo: row.mora_tipo,
     moraValor: Number(row.mora_valor),
+    graciaDias: row.gracia_dias,
+    fechaFin: row.modalidad === "cohorte" ? (row.fecha_fin ? isoToDMY(row.fecha_fin) : null) : null,
   };
 }
 
 const ADMIN_COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, docente_id, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, vendidos, vistas, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, gracia_dias, vendidos, vistas, docente:users!docente_id(nombre)";
 
 export async function getAdminCourses(): Promise<Course[]> {
   const supabase = await createClient();

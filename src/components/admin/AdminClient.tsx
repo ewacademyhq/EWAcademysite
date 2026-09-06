@@ -31,6 +31,7 @@ function courseToRow(c: Course) {
     descripcion: c.desc,
     precio: c.precio,
     fecha_inicio: c.modalidad === "cohorte" ? isoFromDMY(c.fecha) : null,
+    fecha_fin: c.modalidad === "cohorte" && c.fechaFin ? isoFromDMY(c.fechaFin) : null,
     duracion: c.duracion,
     docente_id: c.docenteId ?? null,
     pago_tipo: c.pagoTipo,
@@ -38,6 +39,7 @@ function courseToRow(c: Course) {
     comision: c.comision,
     mora_tipo: c.moraTipo ?? "pct",
     mora_valor: c.moraValor ?? 5,
+    gracia_dias: c.graciaDias ?? 5,
     vendidos: c.vendidos,
     vistas: c.vistas,
   };
@@ -111,7 +113,7 @@ export function AdminClient({
             const aLabel = ESTADOS[row.a as EstadoMatricula]?.label ?? row.a;
             return {
               id: fichaId,
-              txt: `${deLabel} → ${aLabel} · ${usuarioNombre ?? "—"} · ${new Date(row.at).toLocaleString("es-AR")}`,
+              txt: `${deLabel} → ${aLabel} · ${usuarioNombre ?? "Sistema (automático)"} · ${new Date(row.at).toLocaleString("es-AR")}`,
             };
           })
         );
@@ -233,6 +235,7 @@ export function AdminClient({
   async function approve(r: Receipt) {
     const supabase = createClient();
     const nowIso = new Date().toISOString();
+    const hoy = todayISO();
     const { error: e1 } = await supabase
       .from("receipts")
       .update({ estado: "aprobado", revisado_por: adminId, revisado_at: nowIso })
@@ -241,16 +244,28 @@ export function AdminClient({
       flash(`No se pudo aprobar: ${e1.message}`);
       return;
     }
+    // ultimo_pago_at queda registrado acá porque de eso depende el chequeo
+    // de mora (Fase 5) para saber si ya se pagó el período vigente.
     const { error: e2 } = await supabase
       .from("enrollments")
-      .update({ estado: "activa" })
+      .update({ estado: "activa", ultimo_pago_at: hoy })
       .eq("id", r.enrollmentId);
     if (e2) {
       flash(`No se pudo activar la matrícula: ${e2.message}`);
       return;
     }
+    await supabase.from("payments").insert({
+      enrollment_id: r.enrollmentId,
+      periodo: hoy,
+      monto: Number(r.monto.replace(/[^0-9]/g, "")),
+      medio: "Transferencia",
+      estado: "acreditado",
+      acreditado_at: nowIso,
+    });
     setQueue((q) => q.filter((x) => x.id !== r.id));
-    setEnroll((es) => es.map((e) => (e.id === r.enrollmentId ? { ...e, estado: "activa" } : e)));
+    setEnroll((es) =>
+      es.map((e) => (e.id === r.enrollmentId ? { ...e, estado: "activa", pago: isoToDMY(hoy) } : e))
+    );
     flash(`Pago aprobado — matrícula activa: ${r.alumno}`);
   }
 
@@ -275,6 +290,7 @@ export function AdminClient({
     const receiptIds = queue.map((q) => q.id);
     const enrollmentIds = queue.map((q) => q.enrollmentId);
     const nowIso = new Date().toISOString();
+    const hoy = todayISO();
 
     const { error: e1 } = await supabase
       .from("receipts")
@@ -286,14 +302,29 @@ export function AdminClient({
     }
     const { error: e2 } = await supabase
       .from("enrollments")
-      .update({ estado: "activa" })
+      .update({ estado: "activa", ultimo_pago_at: hoy })
       .in("id", enrollmentIds);
     if (e2) {
       flash(`No se pudo activar las matrículas: ${e2.message}`);
       return;
     }
 
-    setEnroll((es) => es.map((e) => (enrollmentIds.includes(e.id) ? { ...e, estado: "activa" } : e)));
+    await supabase.from("payments").insert(
+      queue.map((q) => ({
+        enrollment_id: q.enrollmentId,
+        periodo: hoy,
+        monto: Number(q.monto.replace(/[^0-9]/g, "")),
+        medio: "Transferencia" as const,
+        estado: "acreditado",
+        acreditado_at: nowIso,
+      }))
+    );
+
+    setEnroll((es) =>
+      es.map((e) =>
+        enrollmentIds.includes(e.id) ? { ...e, estado: "activa", pago: isoToDMY(hoy) } : e
+      )
+    );
     setQueue([]);
     flash(`${queue.length} comprobantes aprobados de una vez.`, snap);
   }

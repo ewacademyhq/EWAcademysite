@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Course, Enrollment, Modalidad, PagoTipo, Vertical } from "@/lib/types";
 import { PRECIO_MIN, docentePagoOf, nextCode } from "@/lib/business";
 import { formatARS } from "@/lib/format";
+import { dmyToISO } from "@/lib/date";
 import { VERTICALS } from "@/lib/fixtures";
 import type { PersonOption } from "@/lib/data/admin";
 
@@ -20,10 +21,12 @@ export interface CourseDraft {
   pagoValor: string;
   moraTipo: "ninguno" | "pct" | "fijo";
   moraValor: string;
+  graciaDias: string;
   bolsillo: string;
   margen: string;
   desc: string;
   fecha: string;
+  fechaFin: string;
   duracion: string;
   vendidos: number;
   vistas: number;
@@ -44,10 +47,12 @@ function draftFor(course: Course | null, courses: Course[]): CourseDraft {
       pagoValor: "35",
       moraTipo: "pct",
       moraValor: "5",
+      graciaDias: "5",
       bolsillo: "28000",
       margen: "40",
       desc: "Descripción pendiente.",
       fecha: "A definir",
+      fechaFin: "",
       duracion: "4 meses",
       vendidos: 0,
       vistas: 0,
@@ -66,10 +71,12 @@ function draftFor(course: Course | null, courses: Course[]): CourseDraft {
     pagoValor: String(course.pagoValor),
     moraTipo: course.moraTipo || "pct",
     moraValor: String(course.moraValor ?? 5),
+    graciaDias: String(course.graciaDias ?? 5),
     bolsillo: String(Math.round(docentePagoOf(course))),
     margen: "40",
     desc: course.desc,
     fecha: course.fecha,
+    fechaFin: course.fechaFin ?? "",
     duracion: course.duracion,
     vendidos: course.vendidos,
     vistas: course.vistas,
@@ -116,8 +123,10 @@ export function CourseEditorDrawer({
   const pagoValor = Number(draft.pagoValor) || 0;
   const comision = Number(draft.comision) || 0;
   const moraValor = Number(draft.moraValor) || 0;
+  const graciaDias = Number(draft.graciaDias) || 0;
   const bolsillo = Number(draft.bolsillo) || 0;
   const margen = Number(draft.margen) || 0;
+  const fechaFinISO = draft.fechaFin ? dmyToISO(draft.fechaFin) : null;
 
   const pagoDocente = draft.pagoTipo === "pct" ? (precio * pagoValor) / 100 : pagoValor;
   const comisionMonto = (precio * comision) / 100;
@@ -136,6 +145,8 @@ export function CourseEditorDrawer({
   if (draft.pagoTipo === "pct" && (pagoValor < 1 || pagoValor > 90)) errores.push("El porcentaje al docente va entre 1% y 90%.");
   if (draft.pagoTipo === "fijo" && (pagoValor < 1 || pagoValor >= precio)) errores.push("El monto fijo al docente tiene que ser mayor a 0 y menor al precio.");
   if (draft.moraTipo !== "ninguno" && moraValor <= 0) errores.push("El recargo por mora tiene que ser mayor a 0.");
+  if (graciaDias < 0 || graciaDias > 30) errores.push("Los días de gracia van entre 0 y 30.");
+  if (draft.fechaFin && !fechaFinISO) errores.push("La fecha de fin va en formato DD/MM/AAAA.");
   if (neto <= 0) errores.push("Con estos valores el neto para la academia queda en cero o negativo.");
 
   function handleSave() {
@@ -154,6 +165,8 @@ export function CourseEditorDrawer({
       pagoValor,
       moraTipo: draft.moraTipo,
       moraValor,
+      graciaDias,
+      fechaFin: draft.modalidad === "cohorte" ? draft.fechaFin || null : null,
       desc: draft.desc,
       fecha: draft.fecha,
       duracion: draft.duracion,
@@ -407,6 +420,32 @@ export function CourseEditorDrawer({
                   value={draft.moraValor}
                   onChange={(e) => patch("moraValor", e.target.value.replace(/[^0-9.]/g, ""))}
                 />
+              </div>
+            )}
+            <div>
+              <label className={labelClass}>Días de gracia</label>
+              <input
+                className={`${inputClass} mt-2`}
+                value={draft.graciaDias}
+                onChange={(e) => patch("graciaDias", e.target.value.replace(/[^0-9]/g, ""))}
+              />
+              <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+                Días después del vencimiento (día 10) antes de pasar a mora.
+              </p>
+            </div>
+            {draft.modalidad === "cohorte" && (
+              <div>
+                <label className={labelClass}>Fin de cohorte (DD/MM/AAAA)</label>
+                <input
+                  className={`${inputClass} mt-2`}
+                  placeholder="Ej: 15/03/2027"
+                  value={draft.fechaFin}
+                  onChange={(e) => patch("fechaFin", e.target.value)}
+                />
+                <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+                  Opcional. Si se completa, las matrículas de esta cohorte se
+                  finalizan solas en esa fecha.
+                </p>
               </div>
             )}
           </div>
