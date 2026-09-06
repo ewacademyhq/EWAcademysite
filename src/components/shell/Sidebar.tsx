@@ -2,17 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ROLE_USER, navFor, type Role } from "@/lib/nav";
+import { navFor, ROLE_LABEL, type Role } from "@/lib/nav";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+
+function initials(nombre: string): string {
+  return nombre
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
+}
 
 export function Sidebar({
   role,
   defaultCourseCode,
+  nombre,
 }: {
   role: Role;
   defaultCourseCode: string;
+  nombre: string;
 }) {
   const pathname = usePathname();
-  const user = ROLE_USER[role];
   const items = navFor(role, defaultCourseCode);
 
   return (
@@ -30,7 +41,7 @@ export function Sidebar({
           </span>
         </Link>
         <div className="mt-6 text-[10.5px] font-medium uppercase tracking-[.2em] text-[var(--faint)]">
-          {user.label}
+          {ROLE_LABEL[role]}
         </div>
       </div>
 
@@ -55,12 +66,13 @@ export function Sidebar({
 
       <div className="flex items-center gap-3 border-t border-[var(--line)] px-6 py-5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line2)] text-[11px] font-medium">
-          {user.ini}
+          {initials(nombre)}
         </span>
-        <div className="min-w-0">
-          <div className="truncate text-[13px] font-medium">{user.nombre}</div>
-          <div className="text-[11.5px] text-[var(--faint)]">{user.label}</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-medium">{nombre}</div>
+          <div className="text-[11.5px] text-[var(--faint)]">{ROLE_LABEL[role]}</div>
         </div>
+        <LogoutButton />
       </div>
     </aside>
   );

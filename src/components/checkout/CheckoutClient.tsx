@@ -2,12 +2,29 @@
 
 import { useRef, useState } from "react";
 import type { Course } from "@/lib/types";
+import type { CurrentUser } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
 import { Toast } from "@/components/ui/Toast";
+import { createClient } from "@/lib/supabase/client";
 
 type PayMethod = "mp" | "manual";
 
-export function CheckoutClient({ course }: { course: Course }) {
+export function CheckoutClient({
+  course,
+  user,
+}: {
+  course: Course;
+  user: CurrentUser | null;
+}) {
+  const [account, setAccount] = useState<{ nombre: string; email: string } | null>(
+    user ? { nombre: user.nombre, email: user.email } : null
+  );
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+
   const [pay, setPay] = useState<PayMethod>("mp");
   const [file, setFile] = useState<File | null>(null);
   const [paying, setPaying] = useState(false);
@@ -19,10 +36,43 @@ export function CheckoutClient({ course }: { course: Course }) {
   const fechaLabel =
     course.fecha === "Inmediato" ? "ingreso inmediato" : `inicia ${course.fecha}`;
 
-  const disabled = paying || confirmed || (pay === "manual" && !file);
+  const disabled = paying || confirmed || creatingAccount || (pay === "manual" && !file);
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (disabled) return;
+
+    if (!account) {
+      if (!nombre.trim() || !email.trim() || password.length < 6) {
+        setAccountError(
+          "Completá tu nombre, email y una contraseña de al menos 6 caracteres."
+        );
+        return;
+      }
+
+      setCreatingAccount(true);
+      setAccountError(null);
+
+      const supabase = createClient();
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { nombre: nombre.trim() } },
+      });
+
+      setCreatingAccount(false);
+
+      if (error) {
+        setAccountError(
+          error.message.toLowerCase().includes("already registered")
+            ? "Ese email ya tiene una cuenta en EW Academy. Iniciá sesión y volvé a matricularte."
+            : `No pudimos crear tu cuenta: ${error.message}`
+        );
+        return;
+      }
+
+      setAccount({ nombre: nombre.trim(), email: email.trim() });
+    }
+
     setPaying(true);
     window.setTimeout(() => {
       setPaying(false);
@@ -36,7 +86,9 @@ export function CheckoutClient({ course }: { course: Course }) {
     }, 900);
   }
 
-  const buttonLabel = paying
+  const buttonLabel = creatingAccount
+    ? "Creando tu cuenta…"
+    : paying
     ? "Procesando…"
     : confirmed
       ? pay === "mp"
@@ -58,6 +110,59 @@ export function CheckoutClient({ course }: { course: Course }) {
         <p className="mt-3 text-[13.5px] uppercase tracking-[.06em] text-[var(--dim)]">
           {course.vertical} · {modalidadLabel} · {fechaLabel}
         </p>
+
+        <div className="mt-10 text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
+          Tu cuenta
+        </div>
+
+        {account ? (
+          <div className="mt-3 border border-[var(--line)] bg-[var(--surface)] px-5 py-4 text-[13.5px]">
+            Vas a matricularte como{" "}
+            <strong className="font-medium text-[var(--text)]">{account.nombre}</strong> ·{" "}
+            {account.email}
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3">
+            <input
+              type="text"
+              placeholder="Nombre y apellido"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              disabled={confirmed}
+              className="h-12 w-full border border-[var(--line2)] bg-[var(--surface)] px-4 text-[14.5px] placeholder:text-[var(--faint)]"
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={confirmed}
+                className="h-12 w-full border border-[var(--line2)] bg-[var(--surface)] px-4 text-[14.5px] placeholder:text-[var(--faint)]"
+              />
+              <input
+                type="password"
+                placeholder="Contraseña (mín. 6 caracteres)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={confirmed}
+                className="h-12 w-full border border-[var(--line2)] bg-[var(--surface)] px-4 text-[14.5px] placeholder:text-[var(--faint)]"
+              />
+            </div>
+            <p className="text-[12px] leading-[1.5] text-[var(--faint)]">
+              Con esto creamos tu cuenta de alumno. Si ya tenés una,{" "}
+              <a href="/login" className="text-[var(--accent)] hover:underline">
+                iniciá sesión
+              </a>{" "}
+              antes de matricularte.
+            </p>
+            {accountError && (
+              <p className="border-l-[3px] border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] text-[var(--danger)]">
+                {accountError}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mt-10 text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
           Medio de pago

@@ -1,16 +1,16 @@
 export type Role = "alumno" | "docente" | "admin";
 
+export const ROLE_LABEL: Record<Role, string> = {
+  alumno: "Alumno",
+  docente: "Docente",
+  admin: "Administración",
+};
+
 export interface NavItem {
   label: string;
   href: string;
   isActive: (pathname: string) => boolean;
 }
-
-export const ROLE_USER: Record<Role, { nombre: string; ini: string; label: string }> = {
-  alumno: { nombre: "Sofía Miranda", ini: "SM", label: "Alumno" },
-  docente: { nombre: "Nicolás Rivas", ini: "NR", label: "Docente" },
-  admin: { nombre: "Matías Miró", ini: "MM", label: "Administración" },
-};
 
 export function navFor(role: Role, defaultCourseCode: string): NavItem[] {
   if (role === "alumno") {
