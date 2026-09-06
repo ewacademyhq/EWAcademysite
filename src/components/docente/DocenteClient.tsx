@@ -244,31 +244,35 @@ export function DocenteClient({
           <div className="border-b border-[var(--line)] px-6 py-4 text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
             Alumnos — {code}
           </div>
-          <div className="grid grid-cols-[1.4fr_.95fr_.8fr_auto] gap-4 border-b border-[var(--line)] px-6 py-3 text-[11px] font-medium uppercase tracking-[.08em] text-[var(--faint)]">
-            <span>Alumno</span>
-            <span>Estado</span>
-            <span>Progreso</span>
-            <span className="justify-self-end">Último pago</span>
-          </div>
-          {students.map((s) => (
-            <div
-              key={s.id}
-              className="grid grid-cols-[1.4fr_.95fr_.8fr_auto] items-center gap-4 border-b border-[var(--line)] px-6 py-3.5 text-[13px] last:border-b-0"
-            >
-              <span className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line2)] text-[11px] font-medium">
-                  {s.ini}
-                </span>
-                {s.nombre}
-              </span>
-              <StatusChip estado={s.estado} />
-              <ProgressBar
-                percent={parseInt(s.prog, 10)}
-                tone={s.estado === "mora" ? "danger" : s.estado === "finalizada" ? "dim" : "accent"}
-              />
-              <span className="justify-self-end text-[var(--dim)]">{s.pago}</span>
+          <div className="overflow-x-auto">
+            <div className="min-w-[560px]">
+              <div className="grid grid-cols-[1.4fr_.95fr_.8fr_auto] gap-4 border-b border-[var(--line)] px-6 py-3 text-[11px] font-medium uppercase tracking-[.08em] text-[var(--faint)]">
+                <span>Alumno</span>
+                <span>Estado</span>
+                <span>Progreso</span>
+                <span className="justify-self-end">Último pago</span>
+              </div>
+              {students.map((s) => (
+                <div
+                  key={s.id}
+                  className="grid grid-cols-[1.4fr_.95fr_.8fr_auto] items-center gap-4 border-b border-[var(--line)] px-6 py-3.5 text-[13px] last:border-b-0"
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line2)] text-[11px] font-medium">
+                      {s.ini}
+                    </span>
+                    {s.nombre}
+                  </span>
+                  <StatusChip estado={s.estado} />
+                  <ProgressBar
+                    percent={parseInt(s.prog, 10)}
+                    tone={s.estado === "mora" ? "danger" : s.estado === "finalizada" ? "dim" : "accent"}
+                  />
+                  <span className="justify-self-end text-[var(--dim)]">{s.pago}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
           <div className="border-t border-[var(--line)] px-6 py-3 text-[12.5px] text-[var(--faint)]">
             El estado de mora lo administra la dirección. Como docente lo
             ves, pero no lo modificás.

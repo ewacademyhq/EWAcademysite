@@ -1,0 +1,40 @@
+name: CI
+
+# Fase 8 — CI básico antes de cada deploy: solo valida que el código
+# compila y pasa lint/tipos. No corre contra la base de Supabase real (no
+# hay tests de integración todavía) ni despliega nada — el deploy sigue
+# siendo manual hasta que exista una cuenta/dominio (ver IMPLEMENTATION_PLAN.md).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Valores de relleno: ninguna página se pre-renderiza estáticamente
+      # contra Supabase (todas usan cookies()/auth, así que Next las trata
+      # como dinámicas), pero el cliente de Supabase igual necesita que
+      # estas variables existan para no fallar al construirse.
+      NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-anon-key"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

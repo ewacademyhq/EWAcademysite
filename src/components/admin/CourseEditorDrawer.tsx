@@ -228,7 +228,7 @@ export function CourseEditorDrawer({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Código</label>
               <input
@@ -317,7 +317,7 @@ export function CourseEditorDrawer({
           </div>
 
           {montoModo === "precio" ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Precio mensual (ARS)</label>
                 <input
@@ -361,7 +361,7 @@ export function CourseEditorDrawer({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Bolsillo del docente por alumno (ARS)</label>
                 <input
@@ -407,7 +407,7 @@ export function CourseEditorDrawer({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Recargo por mora</label>
               <select

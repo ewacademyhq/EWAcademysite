@@ -25,7 +25,12 @@
   --grid-line: rgba(239, 235, 231, 0.05);
 
   --font-nippo: "Nippo", system-ui, sans-serif;
-  --font-humane: "Humane", "Big Shoulders Display", "Arial Narrow", sans-serif;
+  /* "Humane" es la fuente del mockup original, pero es comercial y nunca se
+     compró (no hay @font-face ni link cargándola en ningún lado) — decisión
+     confirmada en la Fase 8: se sigue con Big Shoulders Display (Google
+     Fonts, licencia libre) en producción. Si algún día se compra la
+     licencia de Humane, alcanza con cargarla y ponerla primero acá. */
+  --font-humane: "Big Shoulders Display", "Arial Narrow", sans-serif;
 }
 
 [data-theme="light"] {

@@ -18,18 +18,21 @@ export function Sidebar({
   role,
   defaultCourseCode,
   nombre,
+  onNavigate,
 }: {
   role: Role;
   defaultCourseCode: string;
   nombre: string;
+  /** Fase 8: cierra el drawer mobile al navegar — no-op en desktop. */
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const items = navFor(role, defaultCourseCode);
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[240px] shrink-0 flex-col border-r-2 border-[var(--line)] bg-[var(--bg2)]">
+    <aside className="flex h-full w-full flex-col border-r-2 border-[var(--line)] bg-[var(--bg2)] md:sticky md:top-0 md:h-screen">
       <div className="px-6 pt-8 pb-6">
-        <Link href="/" className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-75">
+        <Link href="/" onClick={onNavigate} className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-75">
           <span
             className="flex h-[34px] w-[34px] items-center justify-center bg-[var(--accent)] text-[15px] font-bold text-[var(--accent-ink)]"
             style={{ clipPath: "polygon(14% 0, 100% 0, 86% 100%, 0 100%)" }}
@@ -52,6 +55,7 @@ export function Sidebar({
             <Link
               key={item.label}
               href={item.href}
+              onClick={onNavigate}
               className={`border-l-[3px] px-3.5 py-2.5 text-[13.5px] transition-colors ${
                 active
                   ? "border-l-[var(--accent)] bg-[var(--surface2)] text-[var(--text)]"

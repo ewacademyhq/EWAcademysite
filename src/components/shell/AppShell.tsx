@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { Sidebar } from "@/components/shell/Sidebar";
+import { ShellLayout } from "@/components/shell/ShellLayout";
 import type { Role } from "@/lib/nav";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -20,9 +20,8 @@ export async function AppShell({
   if (!user) redirect("/login");
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar role={role} defaultCourseCode={defaultCourseCode} nombre={user.nombre} />
-      <main className="flex-1 pb-[140px]">{children}</main>
-    </div>
+    <ShellLayout role={role} defaultCourseCode={defaultCourseCode} nombre={user.nombre}>
+      {children}
+    </ShellLayout>
   );
 }
