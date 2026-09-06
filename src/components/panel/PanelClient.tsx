@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Enrollment } from "@/lib/types";
-import { courseByCode, deudaTotal, moraRecargo, ESTADOS } from "@/lib/business";
+import type { Course, Enrollment } from "@/lib/types";
+import type { PaymentRow } from "@/lib/data/mycourse";
+import { deudaTotal, moraRecargo, ESTADOS } from "@/lib/business";
+import { isoToDMY } from "@/lib/date";
 import { formatARS } from "@/lib/format";
 import { BackLink } from "@/components/ui/BackLink";
 import { StatusChip } from "@/components/ui/StatusChip";
@@ -16,28 +18,77 @@ const today = new Intl.DateTimeFormat("es-AR", {
 }).format(new Date());
 const todayLabel = today.charAt(0).toUpperCase() + today.slice(1);
 
-export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
+function diaDiez(offsetMonths: number): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offsetMonths);
+  d.setDate(10);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function proximoVencimiento(mora: boolean): string {
+  if (!mora) {
+    const now = new Date();
+    return diaDiez(now.getDate() > 10 ? 1 : 0);
+  }
+  const now = new Date();
+  return diaDiez(now.getDate() <= 10 ? -1 : 0);
+}
+
+export function PanelClient({
+  enrollments,
+  courses,
+  paymentsByEnrollment,
+}: {
+  enrollments: Enrollment[];
+  courses: Course[];
+  paymentsByEnrollment: Record<number, PaymentRow[]>;
+}) {
   const [code, setCode] = useState(enrollments[0]?.code ?? "");
   const enrollment = enrollments.find((e) => e.code === code) ?? enrollments[0];
-  const course = courseByCode(enrollment.code);
-  const mora = enrollment.estado === "mora";
-  const recargo = mora ? moraRecargo(course, enrollment.cuota) : 0;
+  const course = courses.find((c) => c.code === enrollment?.code);
+  const mora = enrollment?.estado === "mora";
+  const recargo = mora && course ? moraRecargo(course, enrollment.cuota) : 0;
   const asDropdown = enrollments.length > 5;
+  const vencimiento = enrollment ? proximoVencimiento(mora) : "";
 
-  const payments = [
-    {
-      mes: "Agosto 2026",
-      monto: enrollment.cuota,
-      medio: mora ? "Sin pago" : enrollment.medio,
-      estado: mora ? "mora" : "activa",
-      estadoLabel: mora ? "Vencida" : "Pagada",
-    },
-    { mes: "Julio 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
-    { mes: "Junio 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
-    { mes: "Mayo 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
-  ];
+  const payments = (enrollment ? paymentsByEnrollment[enrollment.id] ?? [] : []).map((p) => ({
+    id: p.id,
+    mes: isoToDMY(p.periodo),
+    monto: Number(p.monto),
+    medio: p.medio,
+    estado: p.estado === "acreditado" ? "activa" : "mora",
+    estadoLabel: p.estado === "acreditado" ? "Pagada" : p.estado,
+  }));
 
-  if (!course) return null;
+  if (!enrollment || !course) {
+    return (
+      <div>
+        <div className="border-b-2 border-[var(--line)] px-[34px] py-[26px]">
+          <BackLink href="/" />
+          <h1
+            className="mt-5 font-bold uppercase text-[var(--text)]"
+            style={{ fontFamily: "var(--font-humane)", fontSize: "56px", lineHeight: 0.84 }}
+          >
+            Todavía no tenés cursos
+          </h1>
+          <p className="mt-2 text-[13.5px] text-[var(--dim)]">{todayLabel}</p>
+        </div>
+        <div className="px-[34px] py-10">
+          <p className="max-w-[52ch] text-[14.5px] leading-[1.6] text-[var(--dim)]">
+            Cuando te matricules en un curso, tu progreso y tus pagos van a
+            aparecer acá.
+          </p>
+          <Link
+            href="/#catalogo"
+            className="mt-5 inline-flex h-11 items-center bg-[var(--accent)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-600)]"
+          >
+            Ver catálogo de cursos
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -68,7 +119,7 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
             >
               {enrollments.map((e) => (
                 <option key={e.code} value={e.code}>
-                  {e.code} · {courseByCode(e.code)?.titulo}
+                  {e.code} · {courses.find((c) => c.code === e.code)?.titulo}
                 </option>
               ))}
             </select>
@@ -84,7 +135,8 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
                       : "border-b-transparent text-[var(--faint)] hover:text-[var(--dim)]"
                   }`}
                 >
-                  {e.code} · {courseByCode(e.code)?.titulo.split(/\s*[—:]\s*/)[0]}
+                  {e.code} ·{" "}
+                  {courses.find((c) => c.code === e.code)?.titulo.split(/\s*[—:]\s*/)[0]}
                 </button>
               ))}
             </div>
@@ -100,7 +152,7 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
           >
             <h2 className="text-[17px] font-medium">Matrícula pausada por mora</h2>
             <p className="mt-2 text-[14.5px] leading-[1.6]">
-              La cuota venció el 10/08 y pasaron los 5 días de gracia. El
+              La cuota venció el {vencimiento} y pasaron los días de gracia. El
               acceso a material y clases en vivo está suspendido — tu
               progreso y tus entregas siguen guardados.
             </p>
@@ -138,11 +190,15 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
           </div>
           <h2 className="mt-2 text-[22px] font-medium">{course.titulo}</h2>
           <p className="mt-2 text-[13px] text-[var(--dim)]">
-            {course.modalidad === "cohorte" ? "Cohorte 2026-B" : "Autogestionado"}{" "}
-            · módulo 3 de 6 · docente {course.docente}
+            {course.modalidad === "cohorte" ? "Cohorte" : "Autogestionado"} ·
+            docente {course.docente}
           </p>
           <div className="mt-5">
-            <ProgressBar percent={parseInt(enrollment.prog, 10)} tone={mora ? "danger" : "accent"} key={enrollment.code} />
+            <ProgressBar
+              percent={parseInt(enrollment.prog, 10)}
+              tone={mora ? "danger" : "accent"}
+              key={enrollment.code}
+            />
           </div>
           <Link
             href={`/curso/${course.code}`}
@@ -159,9 +215,7 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
           <h3 className="mt-2 text-[16px] font-medium">
             Clase en vivo — {course.titulo.split(/\s*[—:]\s*/)[0]}
           </h3>
-          <p className="mt-1 text-[13px] text-[var(--dim)]">
-            Jue 04/09 · 19:00–21:00 ART
-          </p>
+          <p className="mt-1 text-[13px] text-[var(--dim)]">A confirmar</p>
           <div className="mt-6">
             {mora ? (
               <div className="border border-[var(--line)] bg-[var(--surface2)] px-4 py-3.5 text-[13px] text-[var(--faint)]">
@@ -188,11 +242,11 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
               color: mora ? "var(--danger)" : "var(--text)",
             }}
           >
-            {mora ? "10/08" : "10/09"}
+            {vencimiento}
           </div>
           <p className="mt-3 text-[13px] leading-[1.5] text-[var(--dim)]">
             {mora
-              ? "Vencida hace 21 días. Regularizá para reactivar el acceso."
+              ? "Vencida. Regularizá para reactivar el acceso."
               : `${formatARS(enrollment.cuota)} · débito automático con Mercado Pago.`}
           </p>
         </div>
@@ -233,28 +287,31 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
             <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
               Historial de pagos
             </div>
-            <button className="text-[12.5px] text-[var(--dim)] underline-offset-2 hover:text-[var(--accent)] hover:underline">
-              Ver todo
-            </button>
           </div>
-          {payments.map((p, i) => (
-            <div
-              key={p.mes}
-              className={`grid grid-cols-[1.1fr_1fr_.9fr_auto] items-center gap-4 px-6 py-3.5 text-[13px] ${
-                i !== payments.length - 1 ? "border-b border-[var(--line)]" : ""
-              }`}
-            >
-              <span>{p.mes}</span>
-              <span>{formatARS(p.monto)}</span>
-              <span className="text-[var(--dim)]">{p.medio}</span>
-              <span
-                className="justify-self-end border border-[var(--line2)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.06em]"
-                style={{ color: ESTADOS[p.estado as "activa" | "mora"].color }}
-              >
-                {p.estadoLabel}
-              </span>
+          {payments.length === 0 ? (
+            <div className="px-6 py-6 text-[13px] text-[var(--faint)]">
+              Todavía no hay pagos registrados.
             </div>
-          ))}
+          ) : (
+            payments.map((p, i) => (
+              <div
+                key={p.id}
+                className={`grid grid-cols-[1.1fr_1fr_.9fr_auto] items-center gap-4 px-6 py-3.5 text-[13px] ${
+                  i !== payments.length - 1 ? "border-b border-[var(--line)]" : ""
+                }`}
+              >
+                <span>{p.mes}</span>
+                <span>{formatARS(p.monto)}</span>
+                <span className="text-[var(--dim)]">{p.medio}</span>
+                <span
+                  className="justify-self-end border border-[var(--line2)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.06em]"
+                  style={{ color: ESTADOS[p.estado as "activa" | "mora"].color }}
+                >
+                  {p.estadoLabel}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

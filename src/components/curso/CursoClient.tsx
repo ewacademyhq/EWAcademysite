@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { Course, Enrollment } from "@/lib/types";
+import type { ModuleRow } from "@/lib/data/mycourse";
+import { createClient } from "@/lib/supabase/client";
 import { BackLink } from "@/components/ui/BackLink";
 import { Toast } from "@/components/ui/Toast";
 
@@ -12,13 +14,8 @@ const DOCENTE_BIO: Record<string, string> = {
   "Bruno Salgado": "Game Developer independiente",
 };
 
-const BASE_MODULES = [
-  { n: "1", titulo: "Módulo 1 · fundamentos", estado: "Completo" as const, clases: "4 clases grabadas", material: "12 archivos", btn: "Repasar" },
-  { n: "2", titulo: "Módulo 2 · desarrollo", estado: "Completo" as const, clases: "5 clases grabadas", material: "9 archivos", btn: "Repasar" },
-  { n: "3", titulo: "Módulo 3 · práctica avanzada", estado: "En curso" as const, clases: "3 de 5 clases", material: "7 archivos", btn: "Continuar" },
-  { n: "4", titulo: "Módulo 4 · integración", estado: "Bloqueado" as const, clases: "Abre el 12/09", material: "—", btn: "Bloqueado" },
-];
-
+// Sin un sistema de clases grabadas todavía (Fase 7), esta lista queda de
+// muestra — no viene de ninguna tabla real.
 const RECORDINGS = [
   { titulo: "Clase 3: práctica guiada", meta: "22/08 · 1h 52m" },
   { titulo: "Laboratorio del módulo 2", meta: "19/08 · 2h 04m" },
@@ -28,11 +25,16 @@ const RECORDINGS = [
 export function CursoClient({
   course,
   enrollment,
+  modules,
+  progress,
 }: {
   course: Course;
   enrollment: Enrollment;
+  modules: ModuleRow[];
+  progress: Record<number, string>;
 }) {
   const [toast, setToast] = useState<string | null>(null);
+  const [progressState, setProgressState] = useState(progress);
   const mora = enrollment.estado === "mora";
 
   function flash(msg: string) {
@@ -40,13 +42,47 @@ export function CursoClient({
     window.setTimeout(() => setToast(null), 3200);
   }
 
-  const modules = BASE_MODULES.map((m) => {
-    const done = m.estado === "Completo";
-    const locked = m.estado === "Bloqueado" || (mora && !done);
-    const estado = mora && !done ? "Sin acceso" : m.estado;
-    const btn = mora && !done ? "Sin acceso" : m.btn;
-    return { ...m, estado, btn, locked, done, current: m.estado === "En curso" };
+  async function completeModule(moduleId: number) {
+    const supabase = createClient();
+    // complete_my_module hace el upsert de module_progress y recalcula
+    // enrollments.progreso en una sola transacción (con permiso elevado
+    // propio, verificando que la matrícula sea del usuario autenticado) —
+    // ver docs/SPEC.md, un alumno no puede actualizar su propia matrícula
+    // directamente por RLS.
+    const { data: pct, error } = await supabase.rpc("complete_my_module", {
+      p_enrollment_id: enrollment.id,
+      p_module_id: moduleId,
+    });
+
+    if (error) {
+      flash(`No se pudo guardar tu progreso: ${error.message}`);
+      return;
+    }
+
+    setProgressState((prev) => ({ ...prev, [moduleId]: "completo" }));
+    flash(`Módulo marcado como completo — ${pct}% del curso`);
+  }
+
+  const doneFlags = modules.map((m) => progressState[m.id] === "completo");
+  const rows = modules.map((m, i) => {
+    const done = doneFlags[i];
+    const unlockedBySequence = i === 0 || doneFlags[i - 1];
+    const locked = mora ? !done : !unlockedBySequence;
+
+    const estadoLabel = done
+      ? "Completo"
+      : mora
+        ? "Sin acceso"
+        : unlockedBySequence
+          ? "Disponible"
+          : "Bloqueado";
+
+    const btnLabel = done ? "Repasar" : mora ? "Sin acceso" : locked ? "Bloqueado" : "Marcar como completo";
+
+    return { ...m, done, locked, estadoLabel, btnLabel, current: !done && !locked };
   });
+
+  const doneTotal = rows.filter((r) => r.done).length;
 
   return (
     <div>
@@ -54,7 +90,7 @@ export function CursoClient({
         <div>
           <BackLink href="/panel" />
           <div className="mt-4 text-[12px] font-medium uppercase tracking-[.14em] text-[var(--accent)]">
-            {course.vertical} · {course.modalidad === "cohorte" ? "Cohorte 2026-B" : "Autogestionado"}
+            {course.vertical} · {course.modalidad === "cohorte" ? "Cohorte" : "Autogestionado"}
           </div>
           <h1
             className="mt-2 font-bold uppercase text-[var(--text)]"
@@ -80,9 +116,7 @@ export function CursoClient({
             <h2 className="mt-2 text-[19px] font-medium">
               Clase en vivo — {course.titulo.split(/\s*[—:]\s*/)[0]}
             </h2>
-            <p className="mt-1 text-[13.5px] opacity-90">
-              Jue 04/09 · 19:00 ART · Google Meet
-            </p>
+            <p className="mt-1 text-[13.5px] opacity-90">A confirmar · Google Meet</p>
             <button
               onClick={() => flash("Abriendo Google Meet…")}
               className="mt-5 inline-flex h-11 items-center bg-[var(--accent-ink)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-opacity hover:opacity-85"
@@ -96,24 +130,32 @@ export function CursoClient({
               <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
                 Módulos
               </div>
-              <span className="text-[13px] text-[var(--faint)]">3 de 6 completados</span>
+              <span className="text-[13px] text-[var(--faint)]">
+                {doneTotal} de {modules.length} completados
+              </span>
             </div>
 
-            {modules.map((m, i) => (
+            {rows.length === 0 && (
+              <div className="px-6 py-6 text-[13px] text-[var(--faint)]">
+                Este curso todavía no tiene módulos cargados.
+              </div>
+            )}
+
+            {rows.map((m, i) => (
               <div
-                key={m.n}
+                key={m.id}
                 className={`flex items-center gap-4 px-6 py-4 ${
-                  i !== modules.length - 1 ? "border-b border-[var(--line)]" : ""
+                  i !== rows.length - 1 ? "border-b border-[var(--line)]" : ""
                 }`}
               >
                 <span
                   className="flex h-[26px] w-[26px] shrink-0 items-center justify-center text-[12.5px] font-medium"
                   style={{
-                    background: m.current && !mora ? "var(--accent)" : "var(--surface2)",
-                    color: m.current && !mora ? "var(--accent-ink)" : "var(--dim)",
+                    background: m.current ? "var(--accent)" : "var(--surface2)",
+                    color: m.current ? "var(--accent-ink)" : "var(--dim)",
                   }}
                 >
-                  {m.n}
+                  {m.numero}
                 </span>
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -125,22 +167,26 @@ export function CursoClient({
                         color: m.locked ? "var(--faint)" : m.current ? "var(--accent)" : "var(--dim)",
                       }}
                     >
-                      {m.estado}
+                      {m.estadoLabel}
                     </span>
-                  </div>
-                  <div className="mt-1 text-[12.5px] text-[var(--faint)]">
-                    {m.clases} · {m.material}
                   </div>
                 </div>
                 <button
-                  onClick={() => (m.locked ? flash("Módulo sin acceso") : flash(`Abriendo módulo ${m.n}`))}
+                  onClick={() =>
+                    m.locked
+                      ? flash(mora ? "Módulo sin acceso" : "Completá el módulo anterior primero")
+                      : m.done
+                        ? flash(`Repasando ${m.titulo}`)
+                        : completeModule(m.id)
+                  }
+                  disabled={m.locked}
                   className={`h-9 shrink-0 px-4 text-[12px] font-medium uppercase tracking-[.06em] ${
                     m.locked
                       ? "cursor-not-allowed text-[var(--faint)]"
                       : "border border-[var(--line2)] text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
                   }`}
                 >
-                  {m.btn}
+                  {m.btnLabel}
                 </button>
               </div>
             ))}

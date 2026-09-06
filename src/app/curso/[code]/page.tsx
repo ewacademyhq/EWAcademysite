@@ -1,10 +1,9 @@
-import { notFound } from "next/navigation";
-import { ENROLL0 } from "@/lib/fixtures";
-import { courseByCode } from "@/lib/business";
+import { notFound, redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { getCourseByCode } from "@/lib/data/courses";
+import { getMyEnrollment, getCourseModules, getMyModuleProgress } from "@/lib/data/mycourse";
 import { AppShell } from "@/components/shell/AppShell";
 import { CursoClient } from "@/components/curso/CursoClient";
-
-const CURRENT_STUDENT = "Sofía Miranda";
 
 export default async function CursoPage({
   params,
@@ -13,16 +12,25 @@ export default async function CursoPage({
 }) {
   const { code } = await params;
   const upperCode = code.toUpperCase();
-  const enrollment = ENROLL0.find(
-    (e) => e.nombre === CURRENT_STUDENT && e.code === upperCode
-  );
-  const course = courseByCode(upperCode);
 
-  if (!enrollment || !course) notFound();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const [course, enrollment] = await Promise.all([
+    getCourseByCode(upperCode),
+    getMyEnrollment(upperCode, user.nombre),
+  ]);
+
+  if (!course || !enrollment) notFound();
+
+  const [modules, progress] = await Promise.all([
+    getCourseModules(upperCode),
+    getMyModuleProgress(enrollment.id),
+  ]);
 
   return (
     <AppShell role="alumno" defaultCourseCode={upperCode}>
-      <CursoClient course={course} enrollment={enrollment} />
+      <CursoClient course={course} enrollment={enrollment} modules={modules} progress={progress} />
     </AppShell>
   );
 }

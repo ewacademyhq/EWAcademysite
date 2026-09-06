@@ -7,6 +7,7 @@ import { formatARS } from "@/lib/format";
 import { dmyToISO } from "@/lib/date";
 import { VERTICALS } from "@/lib/fixtures";
 import type { PersonOption } from "@/lib/data/admin";
+import type { ModuleRow } from "@/lib/data/mycourse";
 
 export interface CourseDraft {
   origCode: string | null;
@@ -90,10 +91,14 @@ export function CourseEditorDrawer({
   docentes,
   enrolled,
   pool,
+  modules,
   onClose,
   onSave,
   onAssign,
   onRemoveStudent,
+  onAddModule,
+  onRenameModule,
+  onRemoveModule,
 }: {
   mode: "new" | "edit" | null;
   initialCourse: Course | null;
@@ -101,10 +106,14 @@ export function CourseEditorDrawer({
   docentes: PersonOption[];
   enrolled: Enrollment[];
   pool: PersonOption[];
+  modules: ModuleRow[];
   onClose: () => void;
   onSave: (course: Course, origCode: string | null) => void;
   onAssign: (person: PersonOption) => void;
   onRemoveStudent: (enrollmentId: number) => void;
+  onAddModule: (titulo: string) => void;
+  onRenameModule: (id: number, titulo: string) => void;
+  onRemoveModule: (id: number) => void;
 }) {
   // El padre remonta este componente con una `key` distinta cada vez que se
   // abre para un curso distinto (o para "nuevo"), así que el estado inicial
@@ -112,6 +121,7 @@ export function CourseEditorDrawer({
   const [draft, setDraft] = useState<CourseDraft>(() => draftFor(initialCourse, courses));
   const [montoModo, setMontoModo] = useState<"precio" | "bolsillo">("precio");
   const [addPick, setAddPick] = useState("");
+  const [newModuleTitulo, setNewModuleTitulo] = useState("");
 
   if (!mode) return null;
 
@@ -547,6 +557,67 @@ export function CourseEditorDrawer({
               <p className="mt-2 text-[12px] text-[var(--faint)]">
                 No hay alumnos registrados sin asignar a este curso todavía.
               </p>
+            )}
+          </div>
+
+          <div>
+            <label className={labelClass}>Módulos</label>
+            {!draft.origCode ? (
+              <p className="mt-2 text-[12px] text-[var(--faint)]">
+                Guardá el curso antes de cargar módulos.
+              </p>
+            ) : (
+              <>
+                <div className="mt-2 flex flex-col gap-px bg-[var(--line)]">
+                  {modules.length === 0 && (
+                    <div className="bg-[var(--surface)] px-4 py-3 text-[13px] text-[var(--faint)]">
+                      Todavía no hay módulos cargados.
+                    </div>
+                  )}
+                  {modules.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center gap-3 bg-[var(--surface)] px-4 py-3 text-[13px]"
+                    >
+                      <span className="shrink-0 text-[var(--faint)]">#{m.numero}</span>
+                      <input
+                        className="flex-1 border-0 bg-transparent text-[13px] text-[var(--text)] focus:outline-none"
+                        defaultValue={m.titulo}
+                        onBlur={(e) => {
+                          const value = e.target.value.trim();
+                          if (value && value !== m.titulo) onRenameModule(m.id, value);
+                        }}
+                      />
+                      <button
+                        onClick={() => onRemoveModule(m.id)}
+                        className="shrink-0 text-[12px] uppercase tracking-[.06em] text-[var(--danger)] hover:underline"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    className={`${inputClass} flex-1`}
+                    placeholder="Título del nuevo módulo"
+                    value={newModuleTitulo}
+                    onChange={(e) => setNewModuleTitulo(e.target.value)}
+                  />
+                  <button
+                    onClick={() => {
+                      const value = newModuleTitulo.trim();
+                      if (!value) return;
+                      onAddModule(value);
+                      setNewModuleTitulo("");
+                    }}
+                    disabled={!newModuleTitulo.trim()}
+                    className="h-11 shrink-0 border border-[var(--line2)] px-4 text-[12.5px] font-medium uppercase tracking-[.06em] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </>
             )}
           </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { AuditEntry, Course, Enrollment, EstadoMatricula, Receipt } from "@/lib/types";
 import type { PersonOption } from "@/lib/data/admin";
+import type { ModuleRow } from "@/lib/data/mycourse";
 import { ESTADOS } from "@/lib/business";
 import { isoToDMY, initials, todayISO } from "@/lib/date";
 import { formatARS } from "@/lib/format";
@@ -81,6 +82,7 @@ export function AdminClient({
   const [fichaHistorial, setFichaHistorial] = useState<AuditEntry[]>([]);
   const [dialog, setDialog] = useState<{ code: string; alumnos: number } | null>(null);
   const [toast, setToast] = useState<{ msg: string; snap?: Snapshot } | null>(null);
+  const [courseModules, setCourseModules] = useState<ModuleRow[]>([]);
 
   function flash(msg: string, snap?: Snapshot) {
     setToast({ msg, snap });
@@ -122,6 +124,63 @@ export function AdminClient({
       cancelled = true;
     };
   }, [fichaId]);
+
+  // Trae los módulos reales del curso que se está editando.
+  useEffect(() => {
+    if (!editingCourse) return;
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("modules")
+      .select("id, numero, titulo, orden")
+      .eq("course_code", editingCourse.code)
+      .order("orden")
+      .then(({ data }) => {
+        if (!cancelled) setCourseModules(data ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editingCourse]);
+
+  async function addModule(titulo: string) {
+    if (!editingCourse) return;
+    const numero = courseModules.length ? Math.max(...courseModules.map((m) => m.numero)) + 1 : 1;
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("modules")
+      .insert({ course_code: editingCourse.code, numero, titulo, orden: numero })
+      .select("id, numero, titulo, orden")
+      .single();
+
+    if (error || !data) {
+      flash(`No se pudo agregar el módulo: ${error?.message ?? "error desconocido"}`);
+      return;
+    }
+    setCourseModules((ms) => ms.concat(data).sort((a, b) => a.orden - b.orden));
+    flash("Módulo agregado");
+  }
+
+  async function renameModule(id: number, titulo: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("modules").update({ titulo }).eq("id", id);
+    if (error) {
+      flash(`No se pudo renombrar el módulo: ${error.message}`);
+      return;
+    }
+    setCourseModules((ms) => ms.map((m) => (m.id === id ? { ...m, titulo } : m)));
+  }
+
+  async function removeModule(id: number) {
+    const supabase = createClient();
+    const { error } = await supabase.from("modules").delete().eq("id", id);
+    if (error) {
+      flash(`No se pudo eliminar el módulo: ${error.message}`);
+      return;
+    }
+    setCourseModules((ms) => ms.filter((m) => m.id !== id));
+    flash("Módulo eliminado");
+  }
 
   function openNewCourse() {
     setEditingCourse(null);
@@ -435,10 +494,14 @@ export function AdminClient({
         docentes={docentes}
         enrolled={editingEnrolled}
         pool={pool}
+        modules={courseModules}
         onClose={closeEditor}
         onSave={saveCourse}
         onAssign={assignStudent}
         onRemoveStudent={removeStudent}
+        onAddModule={addModule}
+        onRenameModule={renameModule}
+        onRemoveModule={removeModule}
       />
 
       <FichaDrawer
