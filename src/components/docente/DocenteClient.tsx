@@ -25,6 +25,30 @@ export function DocenteClient({
   queue: Receipt[];
 }) {
   const [code, setCode] = useState(courses[0]?.code ?? "");
+
+  if (courses.length === 0) {
+    return (
+      <div>
+        <div className="border-b-2 border-[var(--line)] px-[34px] py-[26px]">
+          <BackLink href="/" />
+          <h1
+            className="mt-5 font-bold uppercase text-[var(--text)]"
+            style={{ fontFamily: "var(--font-humane)", fontSize: "56px", lineHeight: 0.84 }}
+          >
+            Todavía no tenés cursos a cargo
+          </h1>
+          <p className="mt-2 text-[13.5px] text-[var(--dim)]">{docente}</p>
+        </div>
+        <div className="px-[34px] py-10">
+          <p className="max-w-[52ch] text-[14.5px] leading-[1.6] text-[var(--dim)]">
+            Cuando administración te asigne un curso como docente, tus
+            alumnos y comprobantes pendientes van a aparecer acá.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const asDropdown = courses.length > 5;
   const students = enrollments.filter((e) => e.code === code);
   const totalAlumnos = new Set(

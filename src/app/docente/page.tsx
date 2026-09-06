@@ -1,20 +1,22 @@
 import { AppShell } from "@/components/shell/AppShell";
 import { DocenteClient } from "@/components/docente/DocenteClient";
-import { COURSES0, ENROLL0, QUEUE0 } from "@/lib/fixtures";
+import { getCurrentUser } from "@/lib/auth";
+import { getMyTeachingCourses, getMyStudentEnrollments, getMyReceiptQueue } from "@/lib/data/docente";
 
-const CURRENT_TEACHER = "Nicolás Rivas";
+export default async function DocentePage() {
+  const user = await getCurrentUser();
+  if (!user) return null; // el proxy ya redirige a /login antes de esto
 
-export default function DocentePage() {
-  const courses = COURSES0.filter((c) => c.docente === CURRENT_TEACHER);
+  const courses = await getMyTeachingCourses(user.id, user.nombre);
+  const codes = courses.map((c) => c.code);
+  const [enrollments, queue] = await Promise.all([
+    getMyStudentEnrollments(codes),
+    getMyReceiptQueue(codes),
+  ]);
 
   return (
     <AppShell role="docente" defaultCourseCode={courses[0]?.code ?? ""}>
-      <DocenteClient
-        docente={CURRENT_TEACHER}
-        courses={courses}
-        enrollments={ENROLL0}
-        queue={QUEUE0}
-      />
+      <DocenteClient docente={user.nombre} courses={courses} enrollments={enrollments} queue={queue} />
     </AppShell>
   );
 }
