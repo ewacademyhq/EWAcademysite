@@ -24,14 +24,14 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
   const ingresoMes = enroll
     .filter((e) => e.estado === "activa" || e.estado === "pendiente")
     .reduce((a, e) => a + e.cuota, 0);
-  const maxSold = Math.max(...courses.map((c) => c.vendidos));
+  const maxSold = Math.max(0, ...courses.map((c) => c.vendidos));
   const verticales = new Set(courses.map((c) => c.vertical)).size;
 
   const tiles = [
     { label: "Facturación del mes", value: formatShort(ingresoMes * 12), delta: "+8,4% vs. julio", color: "var(--good)", mark: "var(--accent)" },
     { label: "Verticales activas", value: String(verticales), delta: `${courses.length} cursos publicados`, color: "var(--dim)", mark: "var(--accent)" },
     { label: "Matrículas activas", value: String(activas), delta: `${enroll.length} matrículas totales`, color: "var(--dim)", mark: "var(--accent)" },
-    { label: "Tasa de mora", value: `${Math.round((enMora.length / enroll.length) * 100)}%`, delta: `${enMora.length} alumnos pausados`, color: "var(--danger)", mark: "var(--danger)" },
+    { label: "Tasa de mora", value: `${enroll.length ? Math.round((enMora.length / enroll.length) * 100) : 0}%`, delta: `${enMora.length} alumnos pausados`, color: "var(--danger)", mark: "var(--danger)" },
     { label: "Conversión visita → pago", value: "0,43%", delta: "91 pagos de 21.150 vistas", color: "var(--dim)", mark: "var(--accent)" },
   ];
 
@@ -41,7 +41,7 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
       titulo: c.titulo,
       n: `${c.vendidos} matrículas`,
       ingreso: formatShort(c.vendidos * c.precio),
-      w: Math.round((c.vendidos / maxSold) * 100),
+      w: maxSold ? Math.round((c.vendidos / maxSold) * 100) : 0,
     }));
 
   const funnel = FUNNEL.map(([label, n]) => ({
@@ -61,7 +61,7 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
   const topViewed = [...courses]
     .sort((a, b) => b.vistas - a.vistas)
     .map((c) => {
-      const conv = (c.vendidos / c.vistas) * 100;
+      const conv = c.vistas ? (c.vendidos / c.vistas) * 100 : 0;
       return {
         titulo: c.titulo,
         vistas: c.vistas.toLocaleString("es-AR"),

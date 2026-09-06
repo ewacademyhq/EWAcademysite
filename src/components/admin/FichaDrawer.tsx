@@ -1,31 +1,30 @@
 "use client";
 
-import type { AuditEntry, Enrollment } from "@/lib/types";
-import { courseByCode, deudaTotal, moraRecargo } from "@/lib/business";
+import type { Course, Enrollment } from "@/lib/types";
+import { deudaTotal, moraRecargo } from "@/lib/business";
 import { formatARS } from "@/lib/format";
 import { StatusChip } from "@/components/ui/StatusChip";
 
 export function FichaDrawer({
   enrollment,
-  audit,
+  course,
+  historial,
   onClose,
   onUpdatePrice,
   onToggleMora,
 }: {
   enrollment: Enrollment | null;
-  audit: AuditEntry[];
+  course: Course | null;
+  historial: string[];
   onClose: () => void;
   onUpdatePrice: (id: number) => void;
   onToggleMora: (id: number) => void;
 }) {
-  if (!enrollment) return null;
-  const course = courseByCode(enrollment.code);
-  if (!course) return null;
+  if (!enrollment || !course) return null;
 
   const mora = enrollment.estado === "mora";
   const recargo = mora ? moraRecargo(course, enrollment.cuota) : 0;
   const diff = course.precio - enrollment.cuota;
-  const historial = audit.filter((a) => a.id === enrollment.id);
 
   return (
     <div className="fixed inset-0 z-[90] flex justify-end" style={{ background: "rgba(14,14,14,.72)" }}>
@@ -123,9 +122,9 @@ export function FichaDrawer({
               </p>
             ) : (
               <ul className="mt-3 flex flex-col gap-2">
-                {historial.map((h, i) => (
+                {historial.map((txt, i) => (
                   <li key={i} className="text-[12.5px] text-[var(--dim)]">
-                    {h.txt}
+                    {txt}
                   </li>
                 ))}
               </ul>

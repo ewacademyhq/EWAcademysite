@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Course, Enrollment, Modalidad, PagoTipo, Vertical } from "@/lib/types";
-import { DOCENTES, PRECIO_MIN, docentePagoOf, nextCode } from "@/lib/business";
+import { PRECIO_MIN, docentePagoOf, nextCode } from "@/lib/business";
 import { formatARS } from "@/lib/format";
 import { VERTICALS } from "@/lib/fixtures";
+import type { PersonOption } from "@/lib/data/admin";
 
 export interface CourseDraft {
   origCode: string | null;
@@ -12,7 +13,7 @@ export interface CourseDraft {
   code: string;
   vertical: Vertical;
   modalidad: Modalidad;
-  docente: string;
+  docenteId: string;
   precio: string;
   comision: string;
   pagoTipo: PagoTipo;
@@ -36,7 +37,7 @@ function draftFor(course: Course | null, courses: Course[]): CourseDraft {
       code: nextCode("Ciberseguridad", courses),
       vertical: "Ciberseguridad",
       modalidad: "cohorte",
-      docente: "Sin asignar",
+      docenteId: "",
       precio: "80000",
       comision: "6.2",
       pagoTipo: "pct",
@@ -58,7 +59,7 @@ function draftFor(course: Course | null, courses: Course[]): CourseDraft {
     code: course.code,
     vertical: course.vertical,
     modalidad: course.modalidad,
-    docente: course.docente,
+    docenteId: course.docenteId ?? "",
     precio: String(course.precio),
     comision: String(course.comision),
     pagoTipo: course.pagoTipo,
@@ -79,6 +80,7 @@ export function CourseEditorDrawer({
   mode,
   initialCourse,
   courses,
+  docentes,
   enrolled,
   pool,
   onClose,
@@ -89,25 +91,20 @@ export function CourseEditorDrawer({
   mode: "new" | "edit" | null;
   initialCourse: Course | null;
   courses: Course[];
+  docentes: PersonOption[];
   enrolled: Enrollment[];
-  pool: string[];
+  pool: PersonOption[];
   onClose: () => void;
   onSave: (course: Course, origCode: string | null) => void;
-  onAssign: (name: string) => void;
+  onAssign: (person: PersonOption) => void;
   onRemoveStudent: (enrollmentId: number) => void;
 }) {
+  // El padre remonta este componente con una `key` distinta cada vez que se
+  // abre para un curso distinto (o para "nuevo"), así que el estado inicial
+  // alcanza para resetear el formulario sin necesitar un efecto.
   const [draft, setDraft] = useState<CourseDraft>(() => draftFor(initialCourse, courses));
   const [montoModo, setMontoModo] = useState<"precio" | "bolsillo">("precio");
   const [addPick, setAddPick] = useState("");
-
-  useEffect(() => {
-    if (mode) {
-      setDraft(draftFor(initialCourse, courses));
-      setMontoModo("precio");
-      setAddPick("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, initialCourse?.code]);
 
   if (!mode) return null;
 
@@ -143,12 +140,14 @@ export function CourseEditorDrawer({
 
   function handleSave() {
     if (errores.length) return;
+    const docente = docentes.find((d) => d.id === draft.docenteId);
     const course: Course = {
       code: draft.code,
       titulo: draft.titulo,
       vertical: draft.vertical,
       modalidad: draft.modalidad,
-      docente: draft.docente,
+      docente: docente?.nombre ?? "Sin asignar",
+      docenteId: draft.docenteId || null,
       precio,
       comision,
       pagoTipo: draft.pagoTipo,
@@ -172,7 +171,7 @@ export function CourseEditorDrawer({
   }
 
   const inputClass =
-    "h-11 w-full border border-[var(--line2)] bg-[var(--surface)] px-3.5 text-[14.5px] text-[var(--text)]";
+    "h-11 w-full border border-[var(--line2)] bg-[var(--surface)] px-3.5 text-[14.5px] text-[var(--text)] disabled:cursor-not-allowed disabled:opacity-60";
   const labelClass = "text-[11px] font-medium uppercase tracking-[.14em] text-[var(--faint)]";
 
   return (
@@ -212,8 +211,14 @@ export function CourseEditorDrawer({
               <input
                 className={`${inputClass} mt-2 font-mono uppercase`}
                 value={draft.code}
+                disabled={mode === "edit"}
                 onChange={(e) => patch("code", e.target.value.toUpperCase())}
               />
+              {mode === "edit" && (
+                <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+                  El código no se puede cambiar una vez creado el curso.
+                </p>
+              )}
             </div>
             <div>
               <label className={labelClass}>Vertical</label>
@@ -251,15 +256,21 @@ export function CourseEditorDrawer({
               <label className={labelClass}>Docente</label>
               <select
                 className={`${inputClass} mt-2`}
-                value={draft.docente}
-                onChange={(e) => patch("docente", e.target.value)}
+                value={draft.docenteId}
+                onChange={(e) => patch("docenteId", e.target.value)}
               >
-                {DOCENTES.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                <option value="">Sin asignar</option>
+                {docentes.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.nombre}
                   </option>
                 ))}
               </select>
+              {docentes.length === 0 && (
+                <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+                  Todavía no hay ningún usuario con rol docente.
+                </p>
+              )}
             </div>
           </div>
 
@@ -470,15 +481,16 @@ export function CourseEditorDrawer({
               >
                 <option value="">Elegir alumno del pool…</option>
                 {pool.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
                   </option>
                 ))}
               </select>
               <button
                 onClick={() => {
-                  if (!addPick || !draft.origCode) return;
-                  onAssign(addPick);
+                  const person = pool.find((p) => p.id === addPick);
+                  if (!person || !draft.origCode) return;
+                  onAssign(person);
                   setAddPick("");
                 }}
                 disabled={!addPick || !draft.origCode}
@@ -490,6 +502,11 @@ export function CourseEditorDrawer({
             {!draft.origCode && (
               <p className="mt-2 text-[12px] text-[var(--faint)]">
                 Guardá el curso antes de asignar alumnos.
+              </p>
+            )}
+            {draft.origCode && pool.length === 0 && (
+              <p className="mt-2 text-[12px] text-[var(--faint)]">
+                No hay alumnos registrados sin asignar a este curso todavía.
               </p>
             )}
           </div>

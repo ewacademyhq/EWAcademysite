@@ -133,23 +133,25 @@ export const COURSES0: Course[] = [
   },
 ];
 
+// userId es un placeholder ("fixture-<id>") — estos alumnos no son cuentas
+// reales de Supabase Auth, ver docs/SPEC.md EWA-000.
 export const ENROLL0: Enrollment[] = [
-  { id: 1, nombre: "Sofía Miranda", ini: "SM", code: "CIBER-101", cuota: 89000, desde: "12/03/2026", estado: "activa", pago: "10/07", medio: "Mercado Pago", prog: "42%" },
-  { id: 2, nombre: "Julián Castro", ini: "JC", code: "QA-140", cuota: 79000, desde: "02/04/2026", estado: "pendiente", pago: "27/08", medio: "Transferencia", prog: "61%" },
-  { id: 3, nombre: "Ana Belén Roldán", ini: "AR", code: "CIBER-101", cuota: 82000, desde: "18/01/2026", estado: "activa", pago: "05/08", medio: "Mercado Pago", prog: "88%" },
-  { id: 4, nombre: "Damián Sosa", ini: "DS", code: "IA-101", cuota: 84000, desde: "20/02/2026", estado: "mora", pago: "01/06", medio: "Transferencia", prog: "12%" },
-  { id: 5, nombre: "Valentina Lugo", ini: "VL", code: "QA-140", cuota: 74000, desde: "05/11/2025", estado: "finalizada", pago: "—", medio: "Mercado Pago", prog: "100%" },
-  { id: 6, nombre: "Rocío Ferrer", ini: "RF", code: "CIBER-210", cuota: 70000, desde: "14/05/2026", estado: "mora", pago: "14/07", medio: "Transferencia", prog: "29%" },
-  { id: 7, nombre: "Iván Quiroga", ini: "IQ", code: "IA-320", cuota: 98000, desde: "09/06/2026", estado: "activa", pago: "09/08", medio: "Mercado Pago", prog: "54%" },
-  { id: 8, nombre: "Lucas Benítez", ini: "LB", code: "CIBER-101", cuota: 96000, desde: "01/08/2026", estado: "activa", pago: "01/08", medio: "Mercado Pago", prog: "8%" },
-  { id: 9, nombre: "Nahuel Colman", ini: "NC", code: "GAME-140", cuota: 88000, desde: "03/04/2026", estado: "activa", pago: "03/08", medio: "Mercado Pago", prog: "47%" },
-  { id: 10, nombre: "Ailén Zárate", ini: "AZ", code: "GAME-101", cuota: 68000, desde: "22/07/2026", estado: "pendiente", pago: "25/08", medio: "Transferencia", prog: "15%" },
-  { id: 11, nombre: "Sofía Miranda", ini: "SM", code: "QA-101", cuota: 58000, desde: "04/06/2026", estado: "activa", pago: "04/08", medio: "Mercado Pago", prog: "23%" },
+  { id: 1, userId: "fixture-1", nombre: "Sofía Miranda", ini: "SM", code: "CIBER-101", cuota: 89000, desde: "12/03/2026", estado: "activa", pago: "10/07", medio: "Mercado Pago", prog: "42%" },
+  { id: 2, userId: "fixture-2", nombre: "Julián Castro", ini: "JC", code: "QA-140", cuota: 79000, desde: "02/04/2026", estado: "pendiente", pago: "27/08", medio: "Transferencia", prog: "61%" },
+  { id: 3, userId: "fixture-3", nombre: "Ana Belén Roldán", ini: "AR", code: "CIBER-101", cuota: 82000, desde: "18/01/2026", estado: "activa", pago: "05/08", medio: "Mercado Pago", prog: "88%" },
+  { id: 4, userId: "fixture-4", nombre: "Damián Sosa", ini: "DS", code: "IA-101", cuota: 84000, desde: "20/02/2026", estado: "mora", pago: "01/06", medio: "Transferencia", prog: "12%" },
+  { id: 5, userId: "fixture-5", nombre: "Valentina Lugo", ini: "VL", code: "QA-140", cuota: 74000, desde: "05/11/2025", estado: "finalizada", pago: "—", medio: "Mercado Pago", prog: "100%" },
+  { id: 6, userId: "fixture-6", nombre: "Rocío Ferrer", ini: "RF", code: "CIBER-210", cuota: 70000, desde: "14/05/2026", estado: "mora", pago: "14/07", medio: "Transferencia", prog: "29%" },
+  { id: 7, userId: "fixture-7", nombre: "Iván Quiroga", ini: "IQ", code: "IA-320", cuota: 98000, desde: "09/06/2026", estado: "activa", pago: "09/08", medio: "Mercado Pago", prog: "54%" },
+  { id: 8, userId: "fixture-8", nombre: "Lucas Benítez", ini: "LB", code: "CIBER-101", cuota: 96000, desde: "01/08/2026", estado: "activa", pago: "01/08", medio: "Mercado Pago", prog: "8%" },
+  { id: 9, userId: "fixture-9", nombre: "Nahuel Colman", ini: "NC", code: "GAME-140", cuota: 88000, desde: "03/04/2026", estado: "activa", pago: "03/08", medio: "Mercado Pago", prog: "47%" },
+  { id: 10, userId: "fixture-10", nombre: "Ailén Zárate", ini: "AZ", code: "GAME-101", cuota: 68000, desde: "22/07/2026", estado: "pendiente", pago: "25/08", medio: "Transferencia", prog: "15%" },
+  { id: 11, userId: "fixture-11", nombre: "Sofía Miranda", ini: "SM", code: "QA-101", cuota: 58000, desde: "04/06/2026", estado: "activa", pago: "04/08", medio: "Mercado Pago", prog: "23%" },
 ];
 
 export const QUEUE0: Receipt[] = [
-  { id: 4, alumno: "Ailén Zárate", curso: "GAME-101", monto: "ARS 68.000", fecha: "27/08 16:20", archivo: "transferencia.pdf" },
-  { id: 1, alumno: "Julián Castro", curso: "QA-140", monto: "ARS 79.000", fecha: "27/08 10:41", archivo: "comprobante.jpg" },
-  { id: 2, alumno: "Ana Belén Roldán", curso: "CIBER-101", monto: "ARS 82.000", fecha: "26/08 19:55", archivo: "pago-mp.png" },
-  { id: 3, alumno: "Damián Sosa", curso: "IA-101", monto: "ARS 84.000", fecha: "26/08 09:12", archivo: "captura.png" },
+  { id: 4, enrollmentId: 10, alumno: "Ailén Zárate", curso: "GAME-101", monto: "ARS 68.000", fecha: "27/08 16:20", archivo: "transferencia.pdf" },
+  { id: 1, enrollmentId: 2, alumno: "Julián Castro", curso: "QA-140", monto: "ARS 79.000", fecha: "27/08 10:41", archivo: "comprobante.jpg" },
+  { id: 2, enrollmentId: 3, alumno: "Ana Belén Roldán", curso: "CIBER-101", monto: "ARS 82.000", fecha: "26/08 19:55", archivo: "pago-mp.png" },
+  { id: 3, enrollmentId: 4, alumno: "Damián Sosa", curso: "IA-101", monto: "ARS 84.000", fecha: "26/08 09:12", archivo: "captura.png" },
 ];

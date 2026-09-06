@@ -13,6 +13,7 @@ export interface Course {
   fecha: string;
   duracion: string;
   docente: string;
+  docenteId?: string | null;
   pagoTipo: PagoTipo;
   pagoValor: number;
   comision: number;
@@ -31,6 +32,7 @@ export interface AuditEntry {
 
 export interface Receipt {
   id: number;
+  enrollmentId: number;
   alumno: string;
   curso: string;
   monto: string;
@@ -40,6 +42,7 @@ export interface Receipt {
 
 export interface Enrollment {
   id: number;
+  userId: string;
   nombre: string;
   ini: string;
   code: string;

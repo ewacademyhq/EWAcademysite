@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import type { Enrollment } from "@/lib/types";
 import { courseByCode, deudaTotal, moraRecargo, ESTADOS } from "@/lib/business";
@@ -24,21 +24,18 @@ export function PanelClient({ enrollments }: { enrollments: Enrollment[] }) {
   const recargo = mora ? moraRecargo(course, enrollment.cuota) : 0;
   const asDropdown = enrollments.length > 5;
 
-  const payments = useMemo(
-    () => [
-      {
-        mes: "Agosto 2026",
-        monto: enrollment.cuota,
-        medio: mora ? "Sin pago" : enrollment.medio,
-        estado: mora ? "mora" : "activa",
-        estadoLabel: mora ? "Vencida" : "Pagada",
-      },
-      { mes: "Julio 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
-      { mes: "Junio 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
-      { mes: "Mayo 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
-    ],
-    [enrollment, mora]
-  );
+  const payments = [
+    {
+      mes: "Agosto 2026",
+      monto: enrollment.cuota,
+      medio: mora ? "Sin pago" : enrollment.medio,
+      estado: mora ? "mora" : "activa",
+      estadoLabel: mora ? "Vencida" : "Pagada",
+    },
+    { mes: "Julio 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
+    { mes: "Junio 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
+    { mes: "Mayo 2026", monto: enrollment.cuota, medio: enrollment.medio, estado: "activa", estadoLabel: "Pagada" },
+  ];
 
   if (!course) return null;
 
