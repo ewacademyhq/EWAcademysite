@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Course } from "@/lib/types";
 import type { CurrentUser } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
@@ -16,8 +17,9 @@ export function CheckoutClient({
   course: Course;
   user: CurrentUser | null;
 }) {
-  const [account, setAccount] = useState<{ nombre: string; email: string } | null>(
-    user ? { nombre: user.nombre, email: user.email } : null
+  const router = useRouter();
+  const [account, setAccount] = useState<{ id: string; nombre: string; email: string } | null>(
+    user ? { id: user.id, nombre: user.nombre, email: user.email } : null
   );
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -29,6 +31,7 @@ export function CheckoutClient({
   const [file, setFile] = useState<File | null>(null);
   const [paying, setPaying] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,8 +43,11 @@ export function CheckoutClient({
 
   async function handleConfirm() {
     if (disabled) return;
+    setPayError(null);
 
-    if (!account) {
+    let currentAccount = account;
+
+    if (!currentAccount) {
       if (!nombre.trim() || !email.trim() || password.length < 6) {
         setAccountError(
           "Completá tu nombre, email y una contraseña de al menos 6 caracteres."
@@ -53,7 +59,7 @@ export function CheckoutClient({
       setAccountError(null);
 
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: { data: { nombre: nombre.trim() } },
@@ -61,29 +67,140 @@ export function CheckoutClient({
 
       setCreatingAccount(false);
 
-      if (error) {
+      if (error || !data.user) {
         setAccountError(
-          error.message.toLowerCase().includes("already registered")
+          error?.message.toLowerCase().includes("already registered")
             ? "Ese email ya tiene una cuenta en EW Academy. Iniciá sesión y volvé a matricularte."
-            : `No pudimos crear tu cuenta: ${error.message}`
+            : `No pudimos crear tu cuenta: ${error?.message ?? "error desconocido"}`
         );
         return;
       }
 
-      setAccount({ nombre: nombre.trim(), email: email.trim() });
+      currentAccount = { id: data.user.id, nombre: nombre.trim(), email: email.trim() };
+      setAccount(currentAccount);
     }
 
     setPaying(true);
-    window.setTimeout(() => {
+
+    if (pay === "manual") {
+      await confirmManual(currentAccount.id);
+    } else {
+      await confirmMercadoPago();
+    }
+  }
+
+  async function confirmManual(userId: string) {
+    if (!file) return;
+    const supabase = createClient();
+
+    const path = `${userId}/${course.code}-${file.lastModified}-${file.size}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("comprobantes")
+      .upload(path, file);
+
+    if (uploadError) {
       setPaying(false);
-      setConfirmed(true);
-      setToast(
-        pay === "mp"
-          ? "¡Matrícula confirmada! Ya tenés acceso a tu curso."
-          : "Comprobante enviado. Tu matrícula queda pendiente de aprobación."
-      );
-      window.setTimeout(() => setToast(null), 3200);
-    }, 900);
+      setPayError(`No se pudo subir el comprobante: ${uploadError.message}`);
+      return;
+    }
+
+    const { data: existing } = await supabase
+      .from("enrollments")
+      .select("id, estado")
+      .eq("user_id", userId)
+      .eq("course_code", course.code)
+      .maybeSingle();
+
+    if (existing?.estado === "activa") {
+      setPaying(false);
+      setPayError("Ya tenés una matrícula activa en este curso.");
+      return;
+    }
+
+    let enrollmentId = existing?.id as number | undefined;
+
+    if (!enrollmentId) {
+      const { data: created, error: enrollError } = await supabase
+        .from("enrollments")
+        .insert({
+          user_id: userId,
+          course_code: course.code,
+          cuota_congelada: course.precio,
+          estado: "pendiente",
+          medio: "Transferencia",
+        })
+        .select("id")
+        .single();
+
+      if (enrollError || !created) {
+        setPaying(false);
+        setPayError(`No se pudo registrar la matrícula: ${enrollError?.message ?? "error desconocido"}`);
+        return;
+      }
+      enrollmentId = created.id;
+    }
+
+    const { error: receiptError } = await supabase.from("receipts").insert({
+      enrollment_id: enrollmentId,
+      archivo_url: path,
+      monto: course.precio,
+      estado: "pendiente",
+    });
+
+    if (receiptError) {
+      setPaying(false);
+      setPayError(`No se pudo registrar el comprobante: ${receiptError.message}`);
+      return;
+    }
+
+    finishSuccess("Comprobante enviado. Tu matrícula queda pendiente de aprobación.");
+  }
+
+  async function confirmMercadoPago() {
+    try {
+      const res = await fetch("/api/checkout/mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseCode: course.code }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setPaying(false);
+        setPayError(data.error ?? "No se pudo iniciar el pago.");
+        return;
+      }
+
+      if (data.mode === "redirect") {
+        // Navegación real a Mercado Pago — se va de la página a propósito.
+        // eslint-disable-next-line react-hooks/immutability
+        window.location.href = data.url;
+        return;
+      }
+
+      if (data.mode === "already-active") {
+        setPaying(false);
+        setPayError("Ya tenés una matrícula activa en este curso.");
+        return;
+      }
+
+      // data.mode === "simulated": sin credenciales de Mercado Pago todavía,
+      // la matrícula ya quedó activada del lado del servidor.
+      window.setTimeout(() => {
+        finishSuccess("¡Matrícula confirmada! Ya tenés acceso a tu curso.");
+      }, 900);
+    } catch {
+      setPaying(false);
+      setPayError("No se pudo conectar con Mercado Pago. Probá de nuevo.");
+    }
+  }
+
+  function finishSuccess(msg: string) {
+    setPaying(false);
+    setConfirmed(true);
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 3200);
+    router.refresh();
   }
 
   const buttonLabel = creatingAccount
@@ -307,6 +424,12 @@ export function CheckoutClient({
           >
             {buttonLabel}
           </button>
+
+          {payError && (
+            <p className="mt-3 border-l-[3px] border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] text-[var(--danger)]">
+              {payError}
+            </p>
+          )}
 
           <p className="mt-4 text-[12px] leading-[1.5] text-[var(--faint)]">
             Podés cancelar la recurrencia cuando quieras. La baja aplica al
