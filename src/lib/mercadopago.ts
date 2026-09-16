@@ -34,6 +34,11 @@ export async function createPreference({
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN no está configurado");
 
+  // Mercado Pago rechaza auto_return si back_urls.success no es https — en
+  // local (http://localhost) mandamos las back_urls igual pero sin
+  // auto_return, así se puede probar el flujo sin un dominio público.
+  const isHttps = siteUrl.startsWith("https://");
+
   const res = await fetch(`${MP_API}/checkout/preferences`, {
     method: "POST",
     headers: {
@@ -55,7 +60,7 @@ export async function createPreference({
         pending: `${siteUrl}/panel`,
         failure: `${siteUrl}/checkout`,
       },
-      auto_return: "approved",
+      ...(isHttps ? { auto_return: "approved" } : {}),
       notification_url: `${siteUrl}/api/mercadopago/webhook`,
     }),
   });
