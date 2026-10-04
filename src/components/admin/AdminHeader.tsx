@@ -10,6 +10,7 @@ const TABS = [
   { key: "cursos", label: "Cursos", href: "/admin/cursos", title: "Cursos", subtitle: "Alta, edición y baja de cursos" },
   { key: "matriculas", label: "Matrículas", href: "/admin/matriculas", title: "Matrículas", subtitle: "Estado, cuotas y asignación" },
   { key: "economia", label: "Economía", href: "/admin/economia", title: "Economía", subtitle: "Reparto por curso y neto para la academia" },
+  { key: "docentes", label: "Docentes", href: "/admin/docentes", title: "Docentes", subtitle: "Alta, baja y cursos asignados" },
 ] as const;
 
 export function AdminHeader({ onNewCourse }: { onNewCourse: () => void }) {

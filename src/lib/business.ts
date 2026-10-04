@@ -1,15 +1,8 @@
 import { COURSES0 } from "./fixtures";
-import type { Course, Enrollment, EstadoMatricula, Vertical } from "./types";
+import type { Course, Enrollment, EstadoMatricula } from "./types";
 
 export const GRACE_DAYS = 5;
 export const PRECIO_MIN = 40000;
-
-export const PREFIX: Record<Vertical, string> = {
-  Ciberseguridad: "CIBER",
-  QA: "QA",
-  IA: "IA",
-  Videojuegos: "GAME",
-};
 
 export const DOCENTES = [
   "Nicolás Rivas",
@@ -27,8 +20,8 @@ export const POOL = [
   "Paula Insfrán",
 ];
 
-export function nextCode(vertical: Vertical, courses: Course[]): string {
-  const prefix = PREFIX[vertical] || "EW";
+export function nextCode(prefijo: string, courses: Course[]): string {
+  const prefix = prefijo || "EW";
   const nums = courses
     .filter((c) => c.code.startsWith(prefix + "-"))
     .map((c) => parseInt(c.code.split("-")[1], 10) || 0);
@@ -44,11 +37,26 @@ export const ESTADOS: Record<EstadoMatricula, { label: string; color: string; so
   deuda: { label: "Finalizada con deuda", color: "var(--accent)", soft: "var(--accent-soft)" },
 };
 
+/**
+ * Transiciones manuales permitidas desde el panel de admin. "finalizada" y
+ * "deuda" son terminales (los cierra solo el cron de fin de cohorte) — para
+ * corregir un error de carga existe el flujo de "Forzar corrección", que
+ * pasa por force_estado_change() en la base y no por esta lista (ver
+ * supabase/migrations/0013_estado_transiciones.sql).
+ */
+export const ALLOWED_TRANSITIONS: Record<EstadoMatricula, EstadoMatricula[]> = {
+  pendiente: ["activa"],
+  activa: ["mora", "finalizada"],
+  mora: ["activa", "deuda"],
+  finalizada: [],
+  deuda: [],
+};
+
 export function courseByCode(code: string): Course | undefined {
   return COURSES0.find((c) => c.code === code);
 }
 
-export function docentePagoOf(course: Course): number {
+export function docentePagoOf(course: Pick<Course, "pagoTipo" | "pagoValor" | "precio">): number {
   return course.pagoTipo === "pct"
     ? (course.precio * (course.pagoValor || 0)) / 100
     : course.pagoValor || 0;

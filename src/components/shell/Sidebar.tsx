@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navFor, ROLE_LABEL, type Role } from "@/lib/nav";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 function initials(nombre: string): string {
   return nombre
@@ -76,7 +77,10 @@ export function Sidebar({
           <div className="truncate text-[13px] font-medium">{nombre}</div>
           <div className="text-[11.5px] text-[var(--faint)]">{ROLE_LABEL[role]}</div>
         </div>
-        <LogoutButton />
+        <div className="flex flex-col items-end gap-1.5">
+          <ThemeToggle />
+          <LogoutButton />
+        </div>
       </div>
     </aside>
   );

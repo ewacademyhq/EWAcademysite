@@ -1,15 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { VERTICALS } from "@/lib/fixtures";
 import { formatARS } from "@/lib/format";
 import { Reveal } from "@/components/ui/Reveal";
 import type { Course } from "@/lib/types";
 
-const FILTERS = ["Todas", ...VERTICALS] as const;
-
 export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("Todas");
+  const [filter, setFilter] = useState<string>("Todas");
+
+  // Las verticales del filtro salen de los cursos que realmente existen, no
+  // de una lista fija — así una vertical nueva (Q8) aparece sola en cuanto
+  // tiene al menos un curso cargado, sin traer la tabla `verticales` a la
+  // landing pública.
+  const FILTERS = useMemo(
+    () => ["Todas", ...Array.from(new Set(allCourses.map((c) => c.vertical)))],
+    [allCourses]
+  );
 
   const courses = useMemo(
     () =>
@@ -69,6 +75,14 @@ export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
                 key={course.code}
                 className="group flex flex-col bg-[var(--surface)] p-[26px] transition-colors hover:bg-[var(--surface2)]"
               >
+                {course.imagenUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={course.imagenUrl}
+                    alt={course.titulo}
+                    className="-mx-[26px] -mt-[26px] mb-5 h-[140px] w-[calc(100%+52px)] object-cover"
+                  />
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="bg-[var(--accent)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.12em] text-[var(--accent-ink)]">
                     {course.vertical}

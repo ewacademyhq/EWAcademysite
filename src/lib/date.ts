@@ -18,6 +18,14 @@ export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Fecha (DD/MM/AAAA) en que se efectiviza una baja pedida, a los 30 días de `bajaSolicitadaAt`. */
+export function bajaEfectivaLabel(bajaSolicitadaAt: string): string {
+  const d = new Date(bajaSolicitadaAt);
+  d.setDate(d.getDate() + 30);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
 export function initials(nombre: string): string {
   return nombre
     .split(" ")

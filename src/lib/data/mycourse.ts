@@ -10,8 +10,9 @@ interface EnrollmentRow {
   congelada_desde: string;
   estado: EstadoMatricula;
   ultimo_pago_at: string | null;
-  medio: "Mercado Pago" | "Transferencia" | null;
+  medio: "Mercado Pago" | "Transferencia" | "Manual" | null;
   progreso: number;
+  baja_solicitada_at: string | null;
 }
 
 function mapRow(row: EnrollmentRow, nombre: string): Enrollment {
@@ -27,11 +28,12 @@ function mapRow(row: EnrollmentRow, nombre: string): Enrollment {
     pago: row.ultimo_pago_at ? isoToDMY(row.ultimo_pago_at) : "—",
     medio: row.medio ?? "Mercado Pago",
     prog: `${row.progreso}%`,
+    bajaSolicitadaAt: row.baja_solicitada_at,
   };
 }
 
 const ENROLLMENT_COLUMNS =
-  "id, user_id, course_code, cuota_congelada, congelada_desde, estado, ultimo_pago_at, medio, progreso";
+  "id, user_id, course_code, cuota_congelada, congelada_desde, estado, ultimo_pago_at, medio, progreso, baja_solicitada_at";
 
 /** Todas las matrículas del usuario logueado (RLS ya las limita a las suyas). */
 export async function getMyEnrollments(nombre: string): Promise<Enrollment[]> {

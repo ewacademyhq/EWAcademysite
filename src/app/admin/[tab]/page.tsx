@@ -7,10 +7,12 @@ import {
   getAllEnrollments,
   getReceiptQueue,
   getDocentes,
+  getDocentesConCursos,
   getAlumnos,
+  getVerticales,
 } from "@/lib/data/admin";
 
-const VALID_TABS: AdminTab[] = ["kpi", "pagos", "cursos", "matriculas", "economia"];
+const VALID_TABS: AdminTab[] = ["kpi", "pagos", "cursos", "matriculas", "economia", "docentes"];
 
 export default async function AdminTabPage({
   params,
@@ -24,12 +26,14 @@ export default async function AdminTabPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [courses, enrollments, queue, docentes, alumnos] = await Promise.all([
+  const [courses, enrollments, queue, docentes, docentesConCursos, alumnos, verticales] = await Promise.all([
     getAdminCourses(),
     getAllEnrollments(),
     getReceiptQueue(),
     getDocentes(),
+    getDocentesConCursos(),
     getAlumnos(),
+    getVerticales(),
   ]);
 
   return (
@@ -40,7 +44,9 @@ export default async function AdminTabPage({
         initialEnrollments={enrollments}
         initialQueue={queue}
         docentes={docentes}
+        docentesConCursos={docentesConCursos}
         alumnos={alumnos}
+        verticales={verticales}
         adminId={user.id}
         adminNombre={user.nombre}
       />

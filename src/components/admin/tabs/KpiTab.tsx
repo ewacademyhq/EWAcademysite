@@ -140,15 +140,15 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
         <div className="mt-5 flex flex-col gap-4">
           {funnel.map((f, i) => (
             <div key={f.label} className="flex items-center gap-3">
-              <div className="h-[26px] flex-1 bg-[var(--surface2)]">
+              <div className="relative h-[26px] flex-1 bg-[var(--surface2)]">
                 <div
-                  className="flex h-full items-center px-2 text-[11px] font-medium"
+                  className="absolute inset-y-0 left-0"
                   style={{
                     width: `${f.w}%`,
                     background: i === 3 ? "var(--danger)" : i === 2 ? "var(--accent)" : i === 1 ? "var(--accent-soft)" : "var(--line2)",
-                    color: i === 3 ? "#fff" : i === 2 ? "var(--accent-ink)" : "var(--dim)",
                   }}
-                >
+                />
+                <div className="relative flex h-full items-center px-2 text-[11px] font-medium text-[var(--text)]">
                   {f.label}: {f.n}
                 </div>
               </div>

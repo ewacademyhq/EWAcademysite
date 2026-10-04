@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { AuditEntry, Course, Enrollment, EstadoMatricula, Receipt } from "@/lib/types";
-import type { PersonOption } from "@/lib/data/admin";
+import type { DocenteConCursos, PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
-import { ESTADOS } from "@/lib/business";
+import { ALLOWED_TRANSITIONS, ESTADOS } from "@/lib/business";
 import { isoToDMY, initials, todayISO } from "@/lib/date";
 import { formatARS } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
@@ -14,12 +14,14 @@ import { PagosTab } from "@/components/admin/tabs/PagosTab";
 import { CursosTab } from "@/components/admin/tabs/CursosTab";
 import { MatriculasTab } from "@/components/admin/tabs/MatriculasTab";
 import { EconomiaTab } from "@/components/admin/tabs/EconomiaTab";
+import { DocentesTab } from "@/components/admin/tabs/DocentesTab";
 import { CourseEditorDrawer } from "@/components/admin/CourseEditorDrawer";
 import { FichaDrawer } from "@/components/admin/FichaDrawer";
 import { DeleteDialog } from "@/components/admin/DeleteDialog";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Toast } from "@/components/ui/Toast";
 
-export type AdminTab = "kpi" | "pagos" | "cursos" | "matriculas" | "economia";
+export type AdminTab = "kpi" | "pagos" | "cursos" | "matriculas" | "economia" | "docentes";
 
 type Snapshot = { queue: Receipt[]; enroll: Enrollment[] };
 
@@ -32,7 +34,7 @@ function courseToRow(c: Course) {
     descripcion: c.desc,
     precio: c.precio,
     fecha_inicio: c.modalidad === "cohorte" ? isoFromDMY(c.fecha) : null,
-    fecha_fin: c.modalidad === "cohorte" && c.fechaFin ? isoFromDMY(c.fechaFin) : null,
+    fecha_fin: c.modalidad === "cohorte" ? c.fechaFin ?? null : null,
     duracion: c.duracion,
     docente_id: c.docenteId ?? null,
     pago_tipo: c.pagoTipo,
@@ -43,6 +45,7 @@ function courseToRow(c: Course) {
     gracia_dias: c.graciaDias ?? 5,
     vendidos: c.vendidos,
     vistas: c.vistas,
+    imagen_url: c.imagenUrl ?? null,
   };
 }
 
@@ -59,7 +62,9 @@ export function AdminClient({
   initialEnrollments,
   initialQueue,
   docentes,
+  docentesConCursos,
   alumnos,
+  verticales,
   adminId,
   adminNombre,
 }: {
@@ -68,19 +73,25 @@ export function AdminClient({
   initialEnrollments: Enrollment[];
   initialQueue: Receipt[];
   docentes: PersonOption[];
+  docentesConCursos: DocenteConCursos[];
   alumnos: PersonOption[];
+  verticales: VerticalOption[];
   adminId: string;
   adminNombre: string;
 }) {
   const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [enroll, setEnroll] = useState<Enrollment[]>(initialEnrollments);
   const [queue, setQueue] = useState<Receipt[]>(initialQueue);
+  const [docentesOptions, setDocentesOptions] = useState<PersonOption[]>(docentes);
+  const [docentesList, setDocentesList] = useState<DocenteConCursos[]>(docentesConCursos);
+  const [verticalesOptions, setVerticalesOptions] = useState<VerticalOption[]>(verticales);
 
   const [editor, setEditor] = useState<"new" | "edit" | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [fichaId, setFichaId] = useState<number | null>(null);
   const [fichaHistorial, setFichaHistorial] = useState<AuditEntry[]>([]);
   const [dialog, setDialog] = useState<{ code: string; alumnos: number } | null>(null);
+  const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const [toast, setToast] = useState<{ msg: string; snap?: Snapshot } | null>(null);
   const [courseModules, setCourseModules] = useState<ModuleRow[]>([]);
 
@@ -96,7 +107,7 @@ export function AdminClient({
     const supabase = createClient();
     supabase
       .from("audit_log")
-      .select("de, a, at, usuario:users!usuario_id(nombre)")
+      .select("de, a, at, nota, usuario:users!usuario_id(nombre)")
       .eq("entity", "enrollment")
       .eq("entity_id", String(fichaId))
       .order("at", { ascending: false })
@@ -104,18 +115,20 @@ export function AdminClient({
         if (cancelled || !data) return;
         setFichaHistorial(
           (data as Array<{
-            de: string;
+            de: string | null;
             a: string;
             at: string;
+            nota: string | null;
             usuario: { nombre: string } | { nombre: string }[] | null;
           }>).map((row) => {
             const u = row.usuario;
             const usuarioNombre = Array.isArray(u) ? u[0]?.nombre : u?.nombre;
-            const deLabel = ESTADOS[row.de as EstadoMatricula]?.label ?? row.de;
+            const deLabel = row.de ? ESTADOS[row.de as EstadoMatricula]?.label ?? row.de : null;
             const aLabel = ESTADOS[row.a as EstadoMatricula]?.label ?? row.a;
+            const cambio = deLabel ? `${deLabel} → ${aLabel}` : aLabel;
             return {
               id: fichaId,
-              txt: `${deLabel} → ${aLabel} · ${usuarioNombre ?? "Sistema (automático)"} · ${new Date(row.at).toLocaleString("es-AR")}`,
+              txt: `${cambio} · ${usuarioNombre ?? "Sistema (automático)"} · ${new Date(row.at).toLocaleString("es-AR")}${row.nota ? ` · "${row.nota}"` : ""}`,
             };
           })
         );
@@ -241,7 +254,7 @@ export function AdminClient({
     flash(`Curso ${code} eliminado`);
   }
 
-  async function assignStudent(person: PersonOption) {
+  async function assignStudent(person: PersonOption, motivo: string) {
     if (!editingCourse) return;
     const supabase = createClient();
     const { data, error } = await supabase
@@ -251,7 +264,7 @@ export function AdminClient({
         course_code: editingCourse.code,
         cuota_congelada: editingCourse.precio,
         estado: "activa",
-        medio: "Mercado Pago",
+        medio: "Manual",
         progreso: 0,
       })
       .select("id")
@@ -261,6 +274,17 @@ export function AdminClient({
       flash(`No se pudo asignar: ${error?.message ?? "error desconocido"}`);
       return;
     }
+
+    // No hubo pago real (ni fila en payments/receipts) — el motivo queda en
+    // la auditoría para que se vea en la ficha del alumno por qué está activa.
+    await supabase.from("audit_log").insert({
+      entity: "enrollment",
+      entity_id: String(data.id),
+      de: null,
+      a: "activa (asignación manual)",
+      usuario_id: adminId,
+      nota: motivo,
+    });
 
     const nuevo: Enrollment = {
       id: data.id,
@@ -272,7 +296,7 @@ export function AdminClient({
       desde: isoToDMY(todayISO()),
       estado: "activa",
       pago: "—",
-      medio: "Mercado Pago",
+      medio: "Manual",
       prog: "0%",
     };
     setEnroll((es) => es.concat(nuevo));
@@ -410,6 +434,13 @@ export function AdminClient({
   async function changeEstado(id: number, estado: EstadoMatricula) {
     const e = enroll.find((x) => x.id === id);
     if (!e || e.estado === estado) return;
+    // Defensa en profundidad: la regla real la impone el trigger de la base
+    // (supabase/migrations/0013_estado_transiciones.sql); esto solo evita el
+    // viaje al server para un cambio que de todos modos va a rechazar.
+    if (!ALLOWED_TRANSITIONS[e.estado].includes(estado)) {
+      flash(`No se puede pasar de ${ESTADOS[e.estado].label} a ${ESTADOS[estado].label} directamente.`);
+      return;
+    }
     const supabase = createClient();
     const { error } = await supabase.from("enrollments").update({ estado }).eq("id", id);
     if (error) {
@@ -421,6 +452,23 @@ export function AdminClient({
       .insert({ entity: "enrollment", entity_id: String(id), de: e.estado, a: estado, usuario_id: adminId });
     setEnroll((es) => es.map((x) => (x.id === id ? { ...x, estado } : x)));
     flash(`${e.nombre}: ${ESTADOS[e.estado].label} → ${ESTADOS[estado].label} · ${adminNombre}`);
+  }
+
+  async function forceEstado(id: number, estado: EstadoMatricula, nota: string) {
+    const e = enroll.find((x) => x.id === id);
+    if (!e) return;
+    const supabase = createClient();
+    const { error } = await supabase.rpc("force_estado_change", {
+      p_enrollment_id: id,
+      p_nuevo_estado: estado,
+      p_nota: nota,
+    });
+    if (error) {
+      flash(`No se pudo forzar el cambio: ${error.message}`);
+      return;
+    }
+    setEnroll((es) => es.map((x) => (x.id === id ? { ...x, estado } : x)));
+    flash(`${e.nombre}: ${ESTADOS[e.estado].label} → ${ESTADOS[estado].label} (corrección forzada) · ${adminNombre}`);
   }
 
   function toggleMora(id: number) {
@@ -450,6 +498,56 @@ export function AdminClient({
     flash(`Cuota de ${e.nombre} actualizada a ${formatARS(course.precio)}`);
   }
 
+  async function createDocente(email: string, nombre: string) {
+    const res = await fetch("/api/admin/docentes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, nombre }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      flash(`No se pudo dar de alta: ${json.error ?? "error desconocido"}`);
+      return;
+    }
+    setDocentesList((ds) => ds.concat({ id: json.id, nombre, email, activo: true, cursos: [], ultimaFactura: null }));
+    setDocentesOptions((ds) => ds.concat({ id: json.id, nombre }));
+    flash(`${nombre} dado de alta — le llega una invitación por correo.`);
+  }
+
+  async function crearVertical(nombre: string, prefijo: string): Promise<boolean> {
+    const supabase = createClient();
+    const { error } = await supabase.from("verticales").insert({ nombre, prefijo });
+    if (error) {
+      flash(`No se pudo crear la vertical: ${error.message}`);
+      return false;
+    }
+    setVerticalesOptions((vs) => vs.concat({ nombre, prefijo }).sort((a, b) => a.nombre.localeCompare(b.nombre)));
+    flash(`Vertical "${nombre}" creada`);
+    return true;
+  }
+
+  async function toggleDocenteActivo(id: string, activo: boolean) {
+    const res = await fetch("/api/admin/docentes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, activo }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      flash(`No se pudo actualizar: ${json.error ?? "error desconocido"}`);
+      return;
+    }
+    const docente = docentesList.find((d) => d.id === id);
+    setDocentesList((ds) => ds.map((d) => (d.id === id ? { ...d, activo } : d)));
+    setDocentesOptions((ds) => {
+      if (activo) {
+        return docente && !ds.some((x) => x.id === id) ? ds.concat({ id, nombre: docente.nombre }) : ds;
+      }
+      return ds.filter((x) => x.id !== id);
+    });
+    flash(activo ? "Docente reactivado" : "Docente dado de baja");
+  }
+
   const fichaEnrollment = fichaId ? enroll.find((e) => e.id === fichaId) ?? null : null;
   const fichaCourse = fichaEnrollment ? courses.find((c) => c.code === fichaEnrollment.code) ?? null : null;
   const editingEnrolled = editingCourse ? enroll.filter((e) => e.code === editingCourse.code) : [];
@@ -469,7 +567,7 @@ export function AdminClient({
           onView={(r) => flash(`Vista previa de ${r.archivo}`)}
           onApprove={approve}
           onReject={reject}
-          onApproveAll={approveAll}
+          onApproveAll={() => setConfirmApproveAll(true)}
           onOpenFicha={setFichaId}
         />
       )}
@@ -480,24 +578,30 @@ export function AdminClient({
         <MatriculasTab
           enroll={enroll}
           onChangeEstado={changeEstado}
+          onForceEstado={forceEstado}
           onToggleMora={toggleMora}
           onOpenFicha={setFichaId}
         />
       )}
       {tab === "economia" && <EconomiaTab courses={courses} enroll={enroll} />}
+      {tab === "docentes" && (
+        <DocentesTab docentes={docentesList} onCreate={createDocente} onToggleActivo={toggleDocenteActivo} />
+      )}
 
       <CourseEditorDrawer
         key={`${editor}-${editingCourse?.code ?? "new"}`}
         mode={editor}
         initialCourse={editingCourse}
         courses={courses}
-        docentes={docentes}
+        docentes={docentesOptions}
+        verticales={verticalesOptions}
         enrolled={editingEnrolled}
         pool={pool}
         modules={courseModules}
         onClose={closeEditor}
         onSave={saveCourse}
         onAssign={assignStudent}
+        onCreateVertical={crearVertical}
         onRemoveStudent={removeStudent}
         onAddModule={addModule}
         onRenameModule={renameModule}
@@ -514,6 +618,18 @@ export function AdminClient({
       />
 
       <DeleteDialog target={dialog} onCancel={() => setDialog(null)} onConfirm={confirmDelete} />
+
+      <ConfirmDialog
+        open={confirmApproveAll}
+        title="¿Aprobar todos los comprobantes?"
+        message={`Se van a aprobar ${queue.length} ${queue.length === 1 ? "comprobante" : "comprobantes"} y activar ${queue.length === 1 ? "su matrícula" : "sus matrículas"}. Los pagos que se generen no se pueden deshacer.`}
+        confirmLabel="Aprobar todos"
+        onCancel={() => setConfirmApproveAll(false)}
+        onConfirm={() => {
+          setConfirmApproveAll(false);
+          approveAll();
+        }}
+      />
 
       <Toast message={toast?.msg ?? null} onUndo={toast?.snap ? undo : undefined} />
     </div>

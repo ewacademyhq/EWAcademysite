@@ -1,4 +1,5 @@
-export type Vertical = "Ciberseguridad" | "QA" | "IA" | "Videojuegos";
+/** Nombre de una vertical (tabla `verticales`, antes era un enum fijo — ver Q8). */
+export type Vertical = string;
 export type Modalidad = "cohorte" | "continuo";
 export type PagoTipo = "pct" | "fijo";
 export type MoraTipo = "ninguno" | "pct" | "fijo";
@@ -22,10 +23,12 @@ export interface Course {
   moraTipo?: MoraTipo;
   moraValor?: number;
   graciaDias?: number;
-  /** Fecha de fin de cohorte, dd/mm/yyyy — null en cursos autogestionados. */
+  /** Fecha de fin de cohorte, ISO yyyy-mm-dd — null en cursos autogestionados. */
   fechaFin?: string | null;
   /** Link real a la carpeta de Drive del curso, lo fija el propio docente. */
   driveFolderUrl?: string | null;
+  /** URL pública de la imagen del curso (bucket "cursos"), o null si no se cargó ninguna. */
+  imagenUrl?: string | null;
 }
 
 export interface CourseSession {
@@ -64,6 +67,8 @@ export interface Enrollment {
   desde: string;
   estado: EstadoMatricula;
   pago: string;
-  medio: "Mercado Pago" | "Transferencia";
+  medio: "Mercado Pago" | "Transferencia" | "Manual";
   prog: string;
+  /** Fecha/hora ISO en que el alumno pidió la baja, o null si no pidió ninguna. */
+  bajaSolicitadaAt?: string | null;
 }

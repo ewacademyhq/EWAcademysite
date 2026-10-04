@@ -18,6 +18,7 @@ interface CourseRow {
   vendidos: number;
   vistas: number;
   drive_folder_url: string | null;
+  imagen_url: string | null;
   docente: { nombre: string } | { nombre: string }[] | null;
 }
 
@@ -52,11 +53,12 @@ function mapRow(row: CourseRow): Course {
     moraTipo: row.mora_tipo,
     moraValor: Number(row.mora_valor),
     driveFolderUrl: row.drive_folder_url,
+    imagenUrl: row.imagen_url,
   };
 }
 
 const COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, vendidos, vistas, drive_folder_url, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, vendidos, vistas, drive_folder_url, imagen_url, docente:users!docente_id(nombre)";
 
 export async function getCourses(): Promise<Course[]> {
   const supabase = await createClient();

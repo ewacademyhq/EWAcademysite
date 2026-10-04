@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isoToDMY, initials } from "@/lib/date";
+import { docentePagoOf } from "@/lib/business";
 import type {
   Course,
   CourseSession,
@@ -77,7 +78,7 @@ interface EnrollmentRow {
   congelada_desde: string;
   estado: EstadoMatricula;
   ultimo_pago_at: string | null;
-  medio: "Mercado Pago" | "Transferencia" | null;
+  medio: "Mercado Pago" | "Transferencia" | "Manual" | null;
   progreso: number;
   alumno: { nombre: string } | { nombre: string }[] | null;
 }
@@ -203,4 +204,92 @@ export async function getMyUpcomingSessions(courseCodes: string[]): Promise<Cour
 
   if (error) throw error;
   return (data as CourseSessionRow[]).map(mapSessionRow);
+}
+
+export interface LiquidacionCurso {
+  code: string;
+  titulo: string;
+  alumnos: number;
+  pagoPorAlumno: number;
+  total: number;
+}
+
+export interface Liquidacion {
+  /** Primer día del mes en curso, ISO yyyy-mm-dd. */
+  periodo: string;
+  cursos: LiquidacionCurso[];
+  total: number;
+}
+
+/**
+ * Cuánto le corresponde cobrar al docente este mes, calculado al leer (igual
+ * que hace `EconomiaTab.tsx` para el neto de la academia) — no hay ninguna
+ * tabla de liquidaciones todavía, es derivado de `courses` + `enrollments`.
+ * Cuenta matrículas activas/en mora/pendientes; las finalizadas o con deuda
+ * no suman porque ya no generan cobro corriente.
+ */
+export async function getMyLiquidacion(teacherId: string): Promise<Liquidacion> {
+  const supabase = await createClient();
+  const { data: courseRows, error: courseError } = await supabase
+    .from("courses")
+    .select("code, titulo, pago_tipo, pago_valor, precio")
+    .eq("docente_id", teacherId);
+
+  if (courseError) throw courseError;
+
+  const codes = (courseRows ?? []).map((c) => c.code);
+  let enrollRows: { course_code: string }[] = [];
+  if (codes.length > 0) {
+    const { data, error } = await supabase
+      .from("enrollments")
+      .select("course_code")
+      .in("course_code", codes)
+      .in("estado", ["activa", "mora", "pendiente"]);
+    if (error) throw error;
+    enrollRows = data ?? [];
+  }
+
+  const cursos: LiquidacionCurso[] = (courseRows ?? []).map((c) => {
+    const alumnos = enrollRows.filter((e) => e.course_code === c.code).length;
+    const pagoPorAlumno = docentePagoOf({
+      pagoTipo: c.pago_tipo,
+      pagoValor: Number(c.pago_valor),
+      precio: Number(c.precio),
+    });
+    return { code: c.code, titulo: c.titulo, alumnos, pagoPorAlumno, total: pagoPorAlumno * alumnos };
+  });
+
+  const now = new Date();
+  const periodo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
+  return { periodo, cursos, total: cursos.reduce((a, c) => a + c.total, 0) };
+}
+
+export interface FacturaRow {
+  id: number;
+  periodo: string;
+  monto: number;
+  archivoUrl: string;
+  estado: string;
+  subidoAt: string;
+}
+
+/** Facturas ya subidas por el docente autenticado (RLS las limita a las suyas). */
+export async function getMyFacturas(teacherId: string): Promise<FacturaRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("facturas")
+    .select("id, periodo, monto, archivo_url, estado, subido_at")
+    .eq("docente_id", teacherId)
+    .order("periodo", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    periodo: r.periodo,
+    monto: Number(r.monto),
+    archivoUrl: r.archivo_url,
+    estado: r.estado,
+    subidoAt: r.subido_at,
+  }));
 }

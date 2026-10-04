@@ -16,6 +16,23 @@ export interface PersonOption {
   nombre: string;
 }
 
+export interface VerticalOption {
+  nombre: string;
+  prefijo: string;
+}
+
+/** Verticales cargadas (tabla `verticales`, antes era un enum fijo — Q8). */
+export async function getVerticales(): Promise<VerticalOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("verticales")
+    .select("nombre, prefijo")
+    .order("nombre");
+
+  if (error) throw error;
+  return data;
+}
+
 interface AdminCourseRow {
   code: string;
   vertical: Vertical;
@@ -35,6 +52,7 @@ interface AdminCourseRow {
   gracia_dias: number;
   vendidos: number;
   vistas: number;
+  imagen_url: string | null;
   docente: { nombre: string } | { nombre: string }[] | null;
 }
 
@@ -64,12 +82,13 @@ function mapCourseRow(row: AdminCourseRow): Course {
     moraTipo: row.mora_tipo,
     moraValor: Number(row.mora_valor),
     graciaDias: row.gracia_dias,
-    fechaFin: row.modalidad === "cohorte" ? (row.fecha_fin ? isoToDMY(row.fecha_fin) : null) : null,
+    fechaFin: row.modalidad === "cohorte" ? row.fecha_fin : null,
+    imagenUrl: row.imagen_url,
   };
 }
 
 const ADMIN_COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, gracia_dias, vendidos, vistas, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, gracia_dias, vendidos, vistas, imagen_url, docente:users!docente_id(nombre)";
 
 export async function getAdminCourses(): Promise<Course[]> {
   const supabase = await createClient();
@@ -90,8 +109,9 @@ interface EnrollmentRow {
   congelada_desde: string;
   estado: EstadoMatricula;
   ultimo_pago_at: string | null;
-  medio: "Mercado Pago" | "Transferencia" | null;
+  medio: "Mercado Pago" | "Transferencia" | "Manual" | null;
   progreso: number;
+  baja_solicitada_at: string | null;
   alumno: { nombre: string } | { nombre: string }[] | null;
 }
 
@@ -115,11 +135,12 @@ function mapEnrollmentRow(row: EnrollmentRow): Enrollment {
     pago: row.ultimo_pago_at ? isoToDMY(row.ultimo_pago_at) : "—",
     medio: row.medio ?? "Mercado Pago",
     prog: `${row.progreso}%`,
+    bajaSolicitadaAt: row.baja_solicitada_at,
   };
 }
 
 const ENROLLMENT_COLUMNS =
-  "id, user_id, course_code, cuota_congelada, congelada_desde, estado, ultimo_pago_at, medio, progreso, alumno:users!user_id(nombre)";
+  "id, user_id, course_code, cuota_congelada, congelada_desde, estado, ultimo_pago_at, medio, progreso, baja_solicitada_at, alumno:users!user_id(nombre)";
 
 export async function getAllEnrollments(): Promise<Enrollment[]> {
   const supabase = await createClient();
@@ -177,10 +198,81 @@ export async function getDocentes(): Promise<PersonOption[]> {
     .from("users")
     .select("id, nombre")
     .eq("rol", "docente")
+    .eq("activo", true)
     .order("nombre");
 
   if (error) throw error;
   return data;
+}
+
+export interface UltimaFactura {
+  periodo: string;
+  monto: number;
+  estado: string;
+  archivoUrl: string;
+}
+
+export interface DocenteConCursos {
+  id: string;
+  nombre: string;
+  email: string;
+  activo: boolean;
+  cursos: string[];
+  ultimaFactura: UltimaFactura | null;
+}
+
+interface DocenteRow {
+  id: string;
+  nombre: string;
+  email: string;
+  activo: boolean;
+  cursos: { titulo: string }[] | null;
+}
+
+/** Última factura subida por cada docente, para mostrar en el panel de admin. */
+async function getUltimasFacturasPorDocente(): Promise<Record<string, UltimaFactura>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("facturas")
+    .select("docente_id, periodo, monto, estado, archivo_url")
+    .order("periodo", { ascending: false });
+
+  if (error) throw error;
+
+  const porDocente: Record<string, UltimaFactura> = {};
+  for (const row of data ?? []) {
+    if (!porDocente[row.docente_id]) {
+      porDocente[row.docente_id] = {
+        periodo: row.periodo,
+        monto: Number(row.monto),
+        estado: row.estado,
+        archivoUrl: row.archivo_url,
+      };
+    }
+  }
+  return porDocente;
+}
+
+export async function getDocentesConCursos(): Promise<DocenteConCursos[]> {
+  const supabase = await createClient();
+  const [{ data, error }, ultimasFacturas] = await Promise.all([
+    supabase
+      .from("users")
+      .select("id, nombre, email, activo, cursos:courses!docente_id(titulo)")
+      .eq("rol", "docente")
+      .order("nombre"),
+    getUltimasFacturasPorDocente(),
+  ]);
+
+  if (error) throw error;
+  return (data as unknown as DocenteRow[]).map((row) => ({
+    id: row.id,
+    nombre: row.nombre,
+    email: row.email,
+    activo: row.activo,
+    cursos: (row.cursos ?? []).map((c) => c.titulo),
+    ultimaFactura: ultimasFacturas[row.id] ?? null,
+  }));
 }
 
 export async function getAlumnos(): Promise<PersonOption[]> {

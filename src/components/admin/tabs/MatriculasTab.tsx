@@ -1,20 +1,27 @@
-import type { Enrollment, EstadoMatricula } from "@/lib/types";
-import { courseByCode, ESTADOS } from "@/lib/business";
-import { formatARS } from "@/lib/format";
+"use client";
 
-const ESTADO_KEYS = Object.keys(ESTADOS) as EstadoMatricula[];
+import { useState } from "react";
+import type { Enrollment, EstadoMatricula } from "@/lib/types";
+import { ALLOWED_TRANSITIONS, courseByCode, ESTADOS } from "@/lib/business";
+import { formatARS } from "@/lib/format";
+import { bajaEfectivaLabel } from "@/lib/date";
+import { ForceEstadoDialog } from "@/components/admin/ForceEstadoDialog";
 
 export function MatriculasTab({
   enroll,
   onChangeEstado,
+  onForceEstado,
   onToggleMora,
   onOpenFicha,
 }: {
   enroll: Enrollment[];
   onChangeEstado: (id: number, estado: EstadoMatricula) => void;
+  onForceEstado: (id: number, estado: EstadoMatricula, nota: string) => void;
   onToggleMora: (id: number) => void;
   onOpenFicha: (id: number) => void;
 }) {
+  const [forceTarget, setForceTarget] = useState<Enrollment | null>(null);
+
   return (
     <div className="px-[34px] py-6">
       <div className="mb-4 flex flex-col gap-1 text-[12.5px] text-[var(--faint)]">
@@ -23,7 +30,9 @@ export function MatriculasTab({
           Una matrícula pasa a <strong className="font-medium text-[var(--text)]">Finalizada</strong>{" "}
           en la fecha de fin del cohorte si las cuotas están al día; si quedó
           debiendo va a <strong className="font-medium text-[var(--text)]">Finalizada con deuda</strong>.
-          Ningún cambio de estado está bloqueado, pero queda registrado quién
+          Esos dos estados son terminales — para corregir un error de carga
+          usá &quot;Forzar corrección&quot;, que pide un motivo y queda en la auditoría.
+          El resto de los cambios de estado queda registrado igual, con quién
           lo hizo y cuándo.
         </p>
       </div>
@@ -43,6 +52,8 @@ export function MatriculasTab({
             const vigente = course?.precio ?? e.cuota;
             const diff = vigente - e.cuota;
             const info = ESTADOS[e.estado];
+            const siguientes = ALLOWED_TRANSITIONS[e.estado];
+            const terminal = siguientes.length === 0;
             return (
               <div
                 key={e.id}
@@ -57,18 +68,35 @@ export function MatriculasTab({
                   {e.nombre}
                 </span>
                 <span className="text-[var(--dim)]">{e.code}</span>
-                <select
-                  value={e.estado}
-                  onChange={(ev) => onChangeEstado(e.id, ev.target.value as EstadoMatricula)}
-                  className="h-9 border px-2 text-[12.5px] font-medium"
-                  style={{ borderColor: "var(--line2)", color: info.color, background: info.soft }}
-                >
-                  {ESTADO_KEYS.map((k) => (
-                    <option key={k} value={k}>
-                      {ESTADOS[k].label}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex flex-col gap-1">
+                  <select
+                    value={e.estado}
+                    disabled={terminal}
+                    onChange={(ev) => onChangeEstado(e.id, ev.target.value as EstadoMatricula)}
+                    className="h-9 border px-2 text-[12.5px] font-medium disabled:cursor-not-allowed disabled:opacity-80"
+                    style={{ borderColor: "var(--line2)", color: info.color, background: info.soft }}
+                  >
+                    <option value={e.estado}>{ESTADOS[e.estado].label}</option>
+                    {siguientes.map((k) => (
+                      <option key={k} value={k}>
+                        {ESTADOS[k].label}
+                      </option>
+                    ))}
+                  </select>
+                  {terminal && (
+                    <button
+                      onClick={() => setForceTarget(e)}
+                      className="text-left text-[11px] uppercase tracking-[.06em] text-[var(--faint)] hover:text-[var(--accent)] hover:underline"
+                    >
+                      Forzar corrección…
+                    </button>
+                  )}
+                  {e.bajaSolicitadaAt && (
+                    <span className="text-[11px] text-[var(--danger)]">
+                      Baja solicitada · efectiva {bajaEfectivaLabel(e.bajaSolicitadaAt)}
+                    </span>
+                  )}
+                </div>
                 <span>{formatARS(e.cuota)}</span>
                 <span style={{ color: diff > 0 ? "var(--accent)" : "var(--faint)" }}>
                   {diff === 0 ? "igual" : formatARS(vigente)}
@@ -80,23 +108,34 @@ export function MatriculasTab({
                   >
                     Ficha
                   </button>
-                  <button
-                    onClick={() => onToggleMora(e.id)}
-                    className="h-8 border px-3 text-[11.5px] font-medium uppercase tracking-[.06em]"
-                    style={{
-                      borderColor: e.estado === "mora" ? "var(--danger)" : "var(--line2)",
-                      background: e.estado === "mora" ? "var(--danger-soft)" : "transparent",
-                      color: e.estado === "mora" ? "var(--danger)" : "var(--text)",
-                    }}
-                  >
-                    {e.estado === "mora" ? "Levantar mora" : "Poner en mora"}
-                  </button>
+                  {!terminal && (
+                    <button
+                      onClick={() => onToggleMora(e.id)}
+                      className="h-8 border px-3 text-[11.5px] font-medium uppercase tracking-[.06em]"
+                      style={{
+                        borderColor: e.estado === "mora" ? "var(--danger)" : "var(--line2)",
+                        background: e.estado === "mora" ? "var(--danger-soft)" : "transparent",
+                        color: e.estado === "mora" ? "var(--danger)" : "var(--text)",
+                      }}
+                    >
+                      {e.estado === "mora" ? "Levantar mora" : "Poner en mora"}
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      <ForceEstadoDialog
+        target={forceTarget}
+        onCancel={() => setForceTarget(null)}
+        onConfirm={(estado, nota) => {
+          if (forceTarget) onForceEstado(forceTarget.id, estado, nota);
+          setForceTarget(null);
+        }}
+      />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { BackLink } from "@/components/ui/BackLink";
 
-export function CheckoutHeader() {
+export function CheckoutHeader({ backHref }: { backHref?: string }) {
   return (
     <header className="border-b-2 border-[var(--line)] px-8 py-6">
       <div className="mx-auto flex max-w-[1080px] items-center justify-between">
         <div className="flex items-center gap-6">
-          <BackLink />
+          <BackLink href={backHref} />
           <h1 className="text-[13px] font-medium uppercase tracking-[.14em]">
             Matriculación
           </h1>

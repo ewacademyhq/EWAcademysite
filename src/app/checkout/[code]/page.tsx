@@ -20,7 +20,7 @@ export default async function CheckoutPage({
 
   return (
     <>
-      <CheckoutHeader />
+      <CheckoutHeader backHref={user ? "/panel" : "/"} />
       <CheckoutClient course={course} user={user} />
     </>
   );

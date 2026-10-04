@@ -6,6 +6,8 @@ import {
   getMyStudentEnrollments,
   getMyReceiptQueue,
   getMyUpcomingSessions,
+  getMyLiquidacion,
+  getMyFacturas,
 } from "@/lib/data/docente";
 
 export default async function DocentePage() {
@@ -14,20 +16,25 @@ export default async function DocentePage() {
 
   const courses = await getMyTeachingCourses(user.id, user.nombre);
   const codes = courses.map((c) => c.code);
-  const [enrollments, queue, sessions] = await Promise.all([
+  const [enrollments, queue, sessions, liquidacion, facturas] = await Promise.all([
     getMyStudentEnrollments(codes),
     getMyReceiptQueue(codes),
     getMyUpcomingSessions(codes),
+    getMyLiquidacion(user.id),
+    getMyFacturas(user.id),
   ]);
 
   return (
     <AppShell role="docente" defaultCourseCode={courses[0]?.code ?? ""}>
       <DocenteClient
         docente={user.nombre}
+        docenteId={user.id}
         courses={courses}
         enrollments={enrollments}
         queue={queue}
         sessions={sessions}
+        liquidacion={liquidacion}
+        facturas={facturas}
       />
     </AppShell>
   );

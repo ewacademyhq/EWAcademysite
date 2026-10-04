@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Course, Enrollment, Modalidad, PagoTipo, Vertical } from "@/lib/types";
 import { PRECIO_MIN, docentePagoOf, nextCode } from "@/lib/business";
 import { formatARS } from "@/lib/format";
-import { dmyToISO } from "@/lib/date";
-import { VERTICALS } from "@/lib/fixtures";
-import type { PersonOption } from "@/lib/data/admin";
+import { todayISO } from "@/lib/date";
+import { createClient } from "@/lib/supabase/client";
+import type { PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
+
+const NUEVA_VERTICAL = "__nueva__";
 
 export interface CourseDraft {
   origCode: string | null;
@@ -31,15 +33,17 @@ export interface CourseDraft {
   duracion: string;
   vendidos: number;
   vistas: number;
+  imagenUrl: string;
 }
 
-function draftFor(course: Course | null, courses: Course[]): CourseDraft {
+function draftFor(course: Course | null, courses: Course[], verticales: VerticalOption[]): CourseDraft {
   if (!course) {
+    const primera = verticales[0];
     return {
       origCode: null,
       titulo: "Curso sin título",
-      code: nextCode("Ciberseguridad", courses),
-      vertical: "Ciberseguridad",
+      code: primera ? nextCode(primera.prefijo, courses) : "",
+      vertical: primera?.nombre ?? "",
       modalidad: "cohorte",
       docenteId: "",
       precio: "80000",
@@ -57,6 +61,7 @@ function draftFor(course: Course | null, courses: Course[]): CourseDraft {
       duracion: "4 meses",
       vendidos: 0,
       vistas: 0,
+      imagenUrl: "",
     };
   }
   return {
@@ -81,6 +86,7 @@ function draftFor(course: Course | null, courses: Course[]): CourseDraft {
     duracion: course.duracion,
     vendidos: course.vendidos,
     vistas: course.vistas,
+    imagenUrl: course.imagenUrl ?? "",
   };
 }
 
@@ -89,12 +95,14 @@ export function CourseEditorDrawer({
   initialCourse,
   courses,
   docentes,
+  verticales,
   enrolled,
   pool,
   modules,
   onClose,
   onSave,
   onAssign,
+  onCreateVertical,
   onRemoveStudent,
   onAddModule,
   onRenameModule,
@@ -104,12 +112,14 @@ export function CourseEditorDrawer({
   initialCourse: Course | null;
   courses: Course[];
   docentes: PersonOption[];
+  verticales: VerticalOption[];
   enrolled: Enrollment[];
   pool: PersonOption[];
   modules: ModuleRow[];
   onClose: () => void;
   onSave: (course: Course, origCode: string | null) => void;
-  onAssign: (person: PersonOption) => void;
+  onAssign: (person: PersonOption, motivo: string) => void;
+  onCreateVertical: (nombre: string, prefijo: string) => Promise<boolean>;
   onRemoveStudent: (enrollmentId: number) => void;
   onAddModule: (titulo: string) => void;
   onRenameModule: (id: number, titulo: string) => void;
@@ -118,15 +128,39 @@ export function CourseEditorDrawer({
   // El padre remonta este componente con una `key` distinta cada vez que se
   // abre para un curso distinto (o para "nuevo"), así que el estado inicial
   // alcanza para resetear el formulario sin necesitar un efecto.
-  const [draft, setDraft] = useState<CourseDraft>(() => draftFor(initialCourse, courses));
+  const [draft, setDraft] = useState<CourseDraft>(() => draftFor(initialCourse, courses, verticales));
   const [montoModo, setMontoModo] = useState<"precio" | "bolsillo">("precio");
   const [addPick, setAddPick] = useState("");
+  const [addMotivo, setAddMotivo] = useState("");
   const [newModuleTitulo, setNewModuleTitulo] = useState("");
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const imagenInputRef = useRef<HTMLInputElement>(null);
+  const [creandoVertical, setCreandoVertical] = useState(false);
+  const [nuevaVerticalNombre, setNuevaVerticalNombre] = useState("");
+  const [nuevaVerticalPrefijo, setNuevaVerticalPrefijo] = useState("");
+  const [guardandoVertical, setGuardandoVertical] = useState(false);
 
   if (!mode) return null;
 
   function patch<K extends keyof CourseDraft>(key: K, value: CourseDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
+  }
+
+  async function subirImagen(file: File) {
+    setSubiendoImagen(true);
+    const supabase = createClient();
+    const path = `${draft.code || "sin-codigo"}-${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("cursos").upload(path, file, { upsert: true });
+    setSubiendoImagen(false);
+    if (error) {
+      // No hay toast en este componente — el único feedback de error del
+      // drawer hoy es la lista de "errores" de validación, así que se agrega
+      // acá como alerta simple en vez de inventar un canal nuevo.
+      window.alert(`No se pudo subir la imagen: ${error.message}`);
+      return;
+    }
+    const { data } = supabase.storage.from("cursos").getPublicUrl(path);
+    patch("imagenUrl", data.publicUrl);
   }
 
   const precio = Number(draft.precio) || 0;
@@ -136,7 +170,11 @@ export function CourseEditorDrawer({
   const graciaDias = Number(draft.graciaDias) || 0;
   const bolsillo = Number(draft.bolsillo) || 0;
   const margen = Number(draft.margen) || 0;
-  const fechaFinISO = draft.fechaFin ? dmyToISO(draft.fechaFin) : null;
+  const minFechaFin = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
 
   const pagoDocente = draft.pagoTipo === "pct" ? (precio * pagoValor) / 100 : pagoValor;
   const comisionMonto = (precio * comision) / 100;
@@ -156,7 +194,7 @@ export function CourseEditorDrawer({
   if (draft.pagoTipo === "fijo" && (pagoValor < 1 || pagoValor >= precio)) errores.push("El monto fijo al docente tiene que ser mayor a 0 y menor al precio.");
   if (draft.moraTipo !== "ninguno" && moraValor <= 0) errores.push("El recargo por mora tiene que ser mayor a 0.");
   if (graciaDias < 0 || graciaDias > 30) errores.push("Los días de gracia van entre 0 y 30.");
-  if (draft.fechaFin && !fechaFinISO) errores.push("La fecha de fin va en formato DD/MM/AAAA.");
+  if (draft.fechaFin && draft.fechaFin <= todayISO()) errores.push("La fecha de fin de cohorte tiene que ser posterior a hoy.");
   if (neto <= 0) errores.push("Con estos valores el neto para la academia queda en cero o negativo.");
 
   function handleSave() {
@@ -182,6 +220,7 @@ export function CourseEditorDrawer({
       duracion: draft.duracion,
       vendidos: draft.vendidos,
       vistas: draft.vistas,
+      imagenUrl: draft.imagenUrl || null,
     };
     onSave(course, draft.origCode);
   }
@@ -228,6 +267,51 @@ export function CourseEditorDrawer({
             />
           </div>
 
+          <div>
+            <label className={labelClass}>Imagen del curso</label>
+            <div className="mt-2 flex items-center gap-4">
+              {draft.imagenUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={draft.imagenUrl}
+                  alt=""
+                  className="h-16 w-24 shrink-0 border border-[var(--line2)] object-cover"
+                />
+              ) : (
+                <div className="flex h-16 w-24 shrink-0 items-center justify-center border border-dashed border-[var(--line2)] text-[10.5px] text-[var(--faint)]">
+                  Sin imagen
+                </div>
+              )}
+              <input
+                ref={imagenInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) subirImagen(file);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => imagenInputRef.current?.click()}
+                disabled={subiendoImagen}
+                className="h-9 border border-[var(--line2)] px-4 text-[12px] font-medium uppercase tracking-[.06em] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {subiendoImagen ? "Subiendo…" : draft.imagenUrl ? "Cambiar" : "Subir imagen"}
+              </button>
+              {draft.imagenUrl && (
+                <button
+                  type="button"
+                  onClick={() => patch("imagenUrl", "")}
+                  className="text-[12px] uppercase tracking-[.06em] text-[var(--danger)] hover:underline"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Código</label>
@@ -249,20 +333,78 @@ export function CourseEditorDrawer({
                 className={`${inputClass} mt-2`}
                 value={draft.vertical}
                 onChange={(e) => {
-                  const v = e.target.value as Vertical;
+                  const v = e.target.value;
+                  if (v === NUEVA_VERTICAL) {
+                    setCreandoVertical(true);
+                    return;
+                  }
+                  const prefijo = verticales.find((x) => x.nombre === v)?.prefijo ?? "";
                   setDraft((d) => ({
                     ...d,
                     vertical: v,
-                    code: d.origCode ? d.code : nextCode(v, courses),
+                    code: d.origCode ? d.code : nextCode(prefijo, courses),
                   }));
                 }}
               >
-                {VERTICALS.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
+                {verticales.map((v) => (
+                  <option key={v.nombre} value={v.nombre}>
+                    {v.nombre}
                   </option>
                 ))}
+                <option value={NUEVA_VERTICAL}>+ Nueva vertical…</option>
               </select>
+              {creandoVertical && (
+                <div className="mt-2 flex flex-col gap-2 border border-[var(--line2)] bg-[var(--surface2)] p-3">
+                  <input
+                    className={inputClass}
+                    placeholder="Nombre (ej: Data)"
+                    value={nuevaVerticalNombre}
+                    onChange={(e) => setNuevaVerticalNombre(e.target.value)}
+                  />
+                  <input
+                    className={`${inputClass} font-mono uppercase`}
+                    placeholder="Prefijo del código (ej: DATA)"
+                    value={nuevaVerticalPrefijo}
+                    onChange={(e) => setNuevaVerticalPrefijo(e.target.value.toUpperCase())}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={!nuevaVerticalNombre.trim() || !/^[A-Z]+$/.test(nuevaVerticalPrefijo) || guardandoVertical}
+                      onClick={async () => {
+                        setGuardandoVertical(true);
+                        const nombre = nuevaVerticalNombre.trim();
+                        const prefijo = nuevaVerticalPrefijo;
+                        const ok = await onCreateVertical(nombre, prefijo);
+                        setGuardandoVertical(false);
+                        if (!ok) return;
+                        setDraft((d) => ({
+                          ...d,
+                          vertical: nombre,
+                          code: d.origCode ? d.code : nextCode(prefijo, courses),
+                        }));
+                        setCreandoVertical(false);
+                        setNuevaVerticalNombre("");
+                        setNuevaVerticalPrefijo("");
+                      }}
+                      className="h-9 flex-1 bg-[var(--accent)] text-[12px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {guardandoVertical ? "Creando…" : "Crear"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreandoVertical(false);
+                        setNuevaVerticalNombre("");
+                        setNuevaVerticalPrefijo("");
+                      }}
+                      className="h-9 px-3 text-[12px] text-[var(--faint)] hover:text-[var(--text)]"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className={labelClass}>Modalidad</label>
@@ -445,16 +587,17 @@ export function CourseEditorDrawer({
             </div>
             {draft.modalidad === "cohorte" && (
               <div>
-                <label className={labelClass}>Fin de cohorte (DD/MM/AAAA)</label>
+                <label className={labelClass}>Fin de cohorte</label>
                 <input
+                  type="date"
                   className={`${inputClass} mt-2`}
-                  placeholder="Ej: 15/03/2027"
+                  min={minFechaFin}
                   value={draft.fechaFin}
                   onChange={(e) => patch("fechaFin", e.target.value)}
                 />
                 <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
                   Opcional. Si se completa, las matrículas de esta cohorte se
-                  finalizan solas en esa fecha.
+                  finalizan solas en esa fecha. Tiene que ser una fecha futura.
                 </p>
               </div>
             )}
@@ -522,31 +665,40 @@ export function CourseEditorDrawer({
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex gap-2">
-              <select
-                className={`${inputClass} flex-1`}
-                value={addPick}
-                onChange={(e) => setAddPick(e.target.value)}
-              >
-                <option value="">Elegir alumno del pool…</option>
-                {pool.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => {
-                  const person = pool.find((p) => p.id === addPick);
-                  if (!person || !draft.origCode) return;
-                  onAssign(person);
-                  setAddPick("");
-                }}
-                disabled={!addPick || !draft.origCode}
-                className="h-11 shrink-0 border border-[var(--line2)] px-4 text-[12.5px] font-medium uppercase tracking-[.06em] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Asignar
-              </button>
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="flex gap-2">
+                <select
+                  className={`${inputClass} flex-1`}
+                  value={addPick}
+                  onChange={(e) => setAddPick(e.target.value)}
+                >
+                  <option value="">Elegir alumno del pool…</option>
+                  {pool.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    const person = pool.find((p) => p.id === addPick);
+                    if (!person || !draft.origCode || !addMotivo.trim()) return;
+                    onAssign(person, addMotivo.trim());
+                    setAddPick("");
+                    setAddMotivo("");
+                  }}
+                  disabled={!addPick || !draft.origCode || !addMotivo.trim()}
+                  className="h-11 shrink-0 border border-[var(--line2)] px-4 text-[12.5px] font-medium uppercase tracking-[.06em] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Asignar
+                </button>
+              </div>
+              <input
+                className={inputClass}
+                placeholder="Motivo de la asignación manual (ej: beca, cortesía, error de sistema) — obligatorio"
+                value={addMotivo}
+                onChange={(e) => setAddMotivo(e.target.value)}
+              />
             </div>
             {!draft.origCode && (
               <p className="mt-2 text-[12px] text-[var(--faint)]">

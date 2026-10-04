@@ -1,6 +1,4 @@
-import type { Course, Enrollment, Receipt, Vertical } from "./types";
-
-export const VERTICALS: Vertical[] = ["Ciberseguridad", "QA", "IA", "Videojuegos"];
+import type { Course, Enrollment, Receipt } from "./types";
 
 export const COURSES0: Course[] = [
   {
