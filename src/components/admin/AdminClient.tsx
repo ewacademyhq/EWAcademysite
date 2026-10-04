@@ -577,6 +577,7 @@ export function AdminClient({
       {tab === "matriculas" && (
         <MatriculasTab
           enroll={enroll}
+          courses={courses}
           onChangeEstado={changeEstado}
           onForceEstado={forceEstado}
           onToggleMora={toggleMora}

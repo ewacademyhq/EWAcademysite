@@ -1,20 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { Enrollment, EstadoMatricula } from "@/lib/types";
-import { ALLOWED_TRANSITIONS, courseByCode, ESTADOS } from "@/lib/business";
+import type { Course, Enrollment, EstadoMatricula } from "@/lib/types";
+import { ALLOWED_TRANSITIONS, ESTADOS } from "@/lib/business";
 import { formatARS } from "@/lib/format";
 import { bajaEfectivaLabel } from "@/lib/date";
 import { ForceEstadoDialog } from "@/components/admin/ForceEstadoDialog";
 
 export function MatriculasTab({
   enroll,
+  courses,
   onChangeEstado,
   onForceEstado,
   onToggleMora,
   onOpenFicha,
 }: {
   enroll: Enrollment[];
+  courses: Course[];
   onChangeEstado: (id: number, estado: EstadoMatricula) => void;
   onForceEstado: (id: number, estado: EstadoMatricula, nota: string) => void;
   onToggleMora: (id: number) => void;
@@ -48,7 +50,7 @@ export function MatriculasTab({
             <span className="justify-self-end">Acciones</span>
           </div>
           {enroll.map((e, i) => {
-            const course = courseByCode(e.code);
+            const course = courses.find((c) => c.code === e.code);
             const vigente = course?.precio ?? e.cuota;
             const diff = vigente - e.cuota;
             const info = ESTADOS[e.estado];
