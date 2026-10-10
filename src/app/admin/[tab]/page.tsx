@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/AppShell";
 import { AdminClient, type AdminTab } from "@/components/admin/AdminClient";
 import { getCurrentUser } from "@/lib/auth";
@@ -13,6 +14,8 @@ import {
 } from "@/lib/data/admin";
 
 const VALID_TABS: AdminTab[] = ["kpi", "pagos", "cursos", "matriculas", "economia", "docentes"];
+
+export const metadata: Metadata = { title: "Administración", robots: { index: false, follow: false } };
 
 export default async function AdminTabPage({
   params,

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { CookieConsentBanner } from "@/components/legal/CookieConsentBanner";
 import "./globals.css";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ewacademy.com.ar";
+
 export const metadata: Metadata = {
-  title: "EW Academy",
+  metadataBase: new URL(SITE_URL),
+  title: { default: "EW Academy", template: "%s · EW Academy" },
   description:
     "EW Academy — cursos online y en vivo de Ciberseguridad, QA, Inteligencia Artificial y Desarrollo de Videojuegos.",
 };
@@ -27,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`try{var t=localStorage.getItem("ew-theme");if(t==="light")document.documentElement.dataset.theme="light";}catch(e){}`}
         </Script>
         {children}
+        <CookieConsentBanner />
       </body>
     </html>
   );

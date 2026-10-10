@@ -1,9 +1,20 @@
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { getCourseByCode, getUpcomingSession } from "@/lib/data/courses";
 import { getMyEnrollment, getCourseModules, getMyModuleProgress } from "@/lib/data/mycourse";
 import { AppShell } from "@/components/shell/AppShell";
 import { CursoClient } from "@/components/curso/CursoClient";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  const course = await getCourseByCode(code.toUpperCase());
+  return { title: course?.titulo ?? "Curso", robots: { index: false, follow: false } };
+}
 
 export default async function CursoPage({
   params,

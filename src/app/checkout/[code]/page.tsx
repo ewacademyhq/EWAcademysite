@@ -1,8 +1,22 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getCourseByCode, registerCourseView } from "@/lib/data/courses";
 import { getCurrentUser } from "@/lib/auth";
 import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
 import { CheckoutClient } from "@/components/checkout/CheckoutClient";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  const course = await getCourseByCode(code);
+  return {
+    title: course ? `Checkout — ${course.titulo}` : "Checkout",
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function CheckoutPage({
   params,

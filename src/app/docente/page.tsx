@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/AppShell";
 import { DocenteClient } from "@/components/docente/DocenteClient";
 import { getCurrentUser } from "@/lib/auth";
@@ -9,6 +10,8 @@ import {
   getMyLiquidacion,
   getMyFacturas,
 } from "@/lib/data/docente";
+
+export const metadata: Metadata = { title: "Panel docente", robots: { index: false, follow: false } };
 
 export default async function DocentePage() {
   const user = await getCurrentUser();

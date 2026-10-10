@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/AppShell";
 import { PanelClient } from "@/components/panel/PanelClient";
 import { getCurrentUser } from "@/lib/auth";
 import { getMyEnrollments, getMyPayments, type PaymentRow } from "@/lib/data/mycourse";
 import { getCourses } from "@/lib/data/courses";
+
+export const metadata: Metadata = { title: "Mi panel", robots: { index: false, follow: false } };
 
 export default async function PanelPage() {
   const user = await getCurrentUser();
