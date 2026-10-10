@@ -349,6 +349,12 @@ export function AdminClient({
     setEnroll((es) =>
       es.map((e) => (e.id === r.enrollmentId ? { ...e, estado: "activa", pago: isoToDMY(hoy) } : e))
     );
+    // Best-effort: si falla el mail no queremos romper la aprobación, que ya quedó guardada.
+    fetch("/api/email/matricula-confirmada", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enrollmentId: r.enrollmentId }),
+    }).catch(() => {});
     flash(`Pago aprobado — matrícula activa: ${r.alumno}`);
   }
 
@@ -409,6 +415,13 @@ export function AdminClient({
       )
     );
     setQueue([]);
+    for (const id of enrollmentIds) {
+      fetch("/api/email/matricula-confirmada", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enrollmentId: id }),
+      }).catch(() => {});
+    }
     flash(`${queue.length} comprobantes aprobados de una vez.`, snap);
   }
 
@@ -526,6 +539,30 @@ export function AdminClient({
     return true;
   }
 
+  async function marcarFacturaPagada(docenteId: string, facturaId: number) {
+    const supabase = createClient();
+    const { error } = await supabase.from("facturas").update({ estado: "pagada" }).eq("id", facturaId);
+    if (error) {
+      flash(`No se pudo marcar la factura como pagada: ${error.message}`);
+      return;
+    }
+    await supabase.from("audit_log").insert({
+      entity: "factura",
+      entity_id: String(facturaId),
+      de: "pendiente",
+      a: "pagada",
+      usuario_id: adminId,
+    });
+    setDocentesList((ds) =>
+      ds.map((d) =>
+        d.id === docenteId && d.ultimaFactura
+          ? { ...d, ultimaFactura: { ...d.ultimaFactura, estado: "pagada" } }
+          : d
+      )
+    );
+    flash("Factura marcada como pagada");
+  }
+
   async function toggleDocenteActivo(id: string, activo: boolean) {
     const res = await fetch("/api/admin/docentes", {
       method: "PATCH",
@@ -586,7 +623,12 @@ export function AdminClient({
       )}
       {tab === "economia" && <EconomiaTab courses={courses} enroll={enroll} />}
       {tab === "docentes" && (
-        <DocentesTab docentes={docentesList} onCreate={createDocente} onToggleActivo={toggleDocenteActivo} />
+        <DocentesTab
+          docentes={docentesList}
+          onCreate={createDocente}
+          onToggleActivo={toggleDocenteActivo}
+          onMarcarFacturaPagada={marcarFacturaPagada}
+        />
       )}
 
       <CourseEditorDrawer

@@ -19,10 +19,12 @@ export function DocentesTab({
   docentes,
   onCreate,
   onToggleActivo,
+  onMarcarFacturaPagada,
 }: {
   docentes: DocenteConCursos[];
   onCreate: (email: string, nombre: string) => void;
   onToggleActivo: (id: string, activo: boolean) => void;
+  onMarcarFacturaPagada: (docenteId: string, facturaId: number) => void;
 }) {
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
@@ -115,12 +117,26 @@ export function DocentesTab({
                 {d.cursos.length ? d.cursos.join(", ") : "Sin cursos asignados"}
               </span>
               {d.ultimaFactura ? (
-                <button
-                  onClick={() => verFactura(d.ultimaFactura!.archivoUrl)}
-                  className="justify-self-start text-left text-[var(--dim)] hover:text-[var(--accent)] hover:underline"
-                >
-                  {periodoCorto(d.ultimaFactura.periodo)} · {formatARS(d.ultimaFactura.monto)}
-                </button>
+                <div className="flex flex-col items-start gap-1">
+                  <button
+                    onClick={() => verFactura(d.ultimaFactura!.archivoUrl)}
+                    className="text-left text-[var(--dim)] hover:text-[var(--accent)] hover:underline"
+                  >
+                    {periodoCorto(d.ultimaFactura.periodo)} · {formatARS(d.ultimaFactura.monto)}
+                  </button>
+                  {d.ultimaFactura.estado === "pagada" ? (
+                    <span className="text-[11px] font-medium uppercase tracking-[.06em] text-[var(--good)]">
+                      Pagada
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => onMarcarFacturaPagada(d.id, d.ultimaFactura!.id)}
+                      className="text-[11px] font-medium uppercase tracking-[.06em] text-[var(--accent)] hover:underline"
+                    >
+                      Pendiente · marcar pagada
+                    </button>
+                  )}
+                </div>
               ) : (
                 <span className="text-[var(--faint)]">Sin facturas</span>
               )}

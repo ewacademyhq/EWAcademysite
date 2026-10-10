@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { btnPrimary, btnSecondary } from "@/components/ui/buttons";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import { ROLE_HOME, type Rol } from "@/lib/role-home";
 
 const LINKS = [
   { href: "#catalogo", label: "Cursos" },
@@ -10,7 +12,7 @@ const LINKS = [
   { href: "#pago", label: "Pagos" },
 ];
 
-export function Header() {
+export function Header({ user }: { user?: { nombre: string; rol: Rol } | null }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,9 +43,18 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link href="/login" className={btnSecondary}>
-            Ingresar
-          </Link>
+          {user ? (
+            <>
+              <Link href={ROLE_HOME[user.rol]} className={btnSecondary}>
+                Ir a mi panel
+              </Link>
+              <LogoutButton />
+            </>
+          ) : (
+            <Link href="/login" className={btnSecondary}>
+              Ingresar
+            </Link>
+          )}
           <a href="#catalogo" className={btnPrimary}>
             Ver cursos
           </a>
@@ -82,9 +93,18 @@ export function Header() {
             ))}
           </nav>
           <div className="mt-5 flex items-center gap-3">
-            <Link href="/login" className={btnSecondary} onClick={() => setOpen(false)}>
-              Ingresar
-            </Link>
+            {user ? (
+              <>
+                <Link href={ROLE_HOME[user.rol]} className={btnSecondary} onClick={() => setOpen(false)}>
+                  Ir a mi panel
+                </Link>
+                <LogoutButton />
+              </>
+            ) : (
+              <Link href="/login" className={btnSecondary} onClick={() => setOpen(false)}>
+                Ingresar
+              </Link>
+            )}
             <a href="#catalogo" className={btnPrimary} onClick={() => setOpen(false)}>
               Ver cursos
             </a>

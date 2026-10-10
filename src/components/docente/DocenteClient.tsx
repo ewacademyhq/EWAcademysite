@@ -206,7 +206,22 @@ export function DocenteClient({
         .sort((a, b) => a.fecha.localeCompare(b.fecha))
     );
     setEditingSesionId(null);
-    // TODO(email): avisar a los alumnos matriculados cuando haya proveedor de correo (Fase 3).
+
+    const fechaLabel = new Date(data.fecha).toLocaleString("es-AR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    // Best-effort: si falla el aviso por mail no queremos romper el flujo de
+    // reprogramar, que ya quedó guardado en la base.
+    fetch("/api/email/clase-reprogramada", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseCode: data.course_code, titulo: data.titulo, fechaLabel }),
+    }).catch(() => {});
+
     flash("Clase reprogramada. Los alumnos van a ver la nueva fecha al entrar al curso.");
   }
 

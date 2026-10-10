@@ -7,13 +7,14 @@ import { Pagos } from "@/components/landing/Pagos";
 import { ClosingPoster } from "@/components/landing/ClosingPoster";
 import { Footer } from "@/components/landing/Footer";
 import { getCourses } from "@/lib/data/courses";
+import { getCurrentUser } from "@/lib/auth";
 
 export default async function Home() {
-  const courses = await getCourses();
+  const [courses, user] = await Promise.all([getCourses(), getCurrentUser()]);
 
   return (
     <>
-      <Header />
+      <Header user={user} />
       <main>
         <Hero />
         <BrandStrip />

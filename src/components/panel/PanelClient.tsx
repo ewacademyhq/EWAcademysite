@@ -271,6 +271,16 @@ export function PanelClient({
             >
               Entrar al curso
             </Link>
+            {enrollment.estado === "finalizada" && (
+              <a
+                href={`/api/certificados/${enrollment.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 items-center border border-[var(--line2)] px-5 text-[13px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                Ver certificado
+              </a>
+            )}
             {!enrollment.bajaSolicitadaAt && (
               <button
                 onClick={() => setConfirmBaja(true)}

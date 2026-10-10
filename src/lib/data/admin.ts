@@ -206,6 +206,7 @@ export async function getDocentes(): Promise<PersonOption[]> {
 }
 
 export interface UltimaFactura {
+  id: number;
   periodo: string;
   monto: number;
   estado: string;
@@ -234,7 +235,7 @@ async function getUltimasFacturasPorDocente(): Promise<Record<string, UltimaFact
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("facturas")
-    .select("docente_id, periodo, monto, estado, archivo_url")
+    .select("id, docente_id, periodo, monto, estado, archivo_url")
     .order("periodo", { ascending: false });
 
   if (error) throw error;
@@ -243,6 +244,7 @@ async function getUltimasFacturasPorDocente(): Promise<Record<string, UltimaFact
   for (const row of data ?? []) {
     if (!porDocente[row.docente_id]) {
       porDocente[row.docente_id] = {
+        id: row.id,
         periodo: row.periodo,
         monto: Number(row.monto),
         estado: row.estado,
