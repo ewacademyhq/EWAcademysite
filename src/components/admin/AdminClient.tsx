@@ -514,7 +514,7 @@ export function AdminClient({
     flash(`Cuota de ${e.nombre} actualizada a ${formatARS(course.precio)}`);
   }
 
-  async function createDocente(email: string, nombre: string) {
+  async function createDocente(email: string, nombre: string): Promise<boolean> {
     const res = await fetch("/api/admin/docentes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -523,11 +523,12 @@ export function AdminClient({
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       flash(`No se pudo dar de alta: ${json.error ?? "error desconocido"}`);
-      return;
+      return false;
     }
     setDocentesList((ds) => ds.concat({ id: json.id, nombre, email, activo: true, cursos: [], ultimaFactura: null }));
     setDocentesOptions((ds) => ds.concat({ id: json.id, nombre }));
     flash(`${nombre} dado de alta — le llega una invitación por correo.`);
+    return true;
   }
 
   async function crearVertical(nombre: string, prefijo: string): Promise<boolean> {

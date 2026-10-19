@@ -22,7 +22,7 @@ export function DocentesTab({
   onMarcarFacturaPagada,
 }: {
   docentes: DocenteConCursos[];
-  onCreate: (email: string, nombre: string) => void;
+  onCreate: (email: string, nombre: string) => Promise<boolean>;
   onToggleActivo: (id: string, activo: boolean) => void;
   onMarcarFacturaPagada: (docenteId: string, facturaId: number) => void;
 }) {
@@ -31,11 +31,16 @@ export function DocentesTab({
 
   const puedeCrear = email.trim().length > 3 && nombre.trim().length > 1;
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!puedeCrear) return;
-    onCreate(email.trim(), nombre.trim());
-    setEmail("");
-    setNombre("");
+    const ok = await onCreate(email.trim(), nombre.trim());
+    // Solo se limpia el formulario si la invitación salió bien — si falló
+    // (ej. email inválido), el admin necesita ver y corregir lo que escribió,
+    // no retipear todo de nuevo.
+    if (ok) {
+      setEmail("");
+      setNombre("");
+    }
   }
 
   async function verFactura(path: string) {

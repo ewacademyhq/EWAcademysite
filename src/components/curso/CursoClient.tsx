@@ -121,12 +121,12 @@ export function CursoClient({
             </h2>
             <p className="mt-1 text-[13.5px] opacity-90">
               {nextSession
-                ? `${new Date(nextSession.fecha).toLocaleString("es-AR", {
+                ? new Date(nextSession.fecha).toLocaleString("es-AR", {
                     day: "2-digit",
                     month: "2-digit",
                     hour: "2-digit",
                     minute: "2-digit",
-                  })} · Google Meet`
+                  })
                 : "Sin clase agendada todavía"}
             </p>
             {nextSession?.meetUrl ? (
@@ -143,7 +143,7 @@ export function CursoClient({
                 disabled
                 className="mt-5 inline-flex h-11 cursor-not-allowed items-center bg-[var(--accent-ink)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] opacity-60"
               >
-                {nextSession ? "Sin link de Meet todavía" : "Sin clase agendada"}
+                {nextSession ? "Sin link todavía" : "Sin clase agendada"}
               </button>
             )}
           </div>

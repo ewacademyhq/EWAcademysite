@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Course, Enrollment } from "@/lib/types";
-import type { PaymentRow } from "@/lib/data/mycourse";
-import { ESTADOS } from "@/lib/business";
-import { isoToDMY, bajaEfectivaLabel } from "@/lib/date";
+import type { Course, CourseSession, Enrollment } from "@/lib/types";
+import { bajaEfectivaLabel } from "@/lib/date";
 import { formatARS } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { BackLink } from "@/components/ui/BackLink";
@@ -43,11 +41,11 @@ const todayLabel = today.charAt(0).toUpperCase() + today.slice(1);
 export function PanelClient({
   enrollments,
   courses,
-  paymentsByEnrollment,
+  nextSessionByCourse,
 }: {
   enrollments: Enrollment[];
   courses: Course[];
-  paymentsByEnrollment: Record<number, PaymentRow[]>;
+  nextSessionByCourse: Record<string, CourseSession | null>;
 }) {
   const [enroll, setEnroll] = useState(enrollments);
   const [code, setCode] = useState(enrollments[0]?.code ?? "");
@@ -90,14 +88,7 @@ export function PanelClient({
     flash("Baja cancelada");
   }
 
-  const payments = (enrollment ? paymentsByEnrollment[enrollment.id] ?? [] : []).map((p) => ({
-    id: p.id,
-    mes: isoToDMY(p.periodo),
-    monto: Number(p.monto),
-    medio: p.medio,
-    estado: p.estado === "acreditado" ? "activa" : "pendiente",
-    estadoLabel: p.estado === "acreditado" ? "Pagada" : p.estado,
-  }));
+  const nextSession = course ? nextSessionByCourse[course.code] ?? null : null;
 
   if (!enrollment || !course) {
     return (
@@ -222,7 +213,7 @@ export function PanelClient({
                 Ver certificado
               </a>
             )}
-            {!enrollment.bajaSolicitadaAt && (
+            {enrollment.estado !== "finalizada" && !enrollment.bajaSolicitadaAt && (
               <button
                 onClick={() => setConfirmBaja(true)}
                 className="text-[12px] font-medium uppercase tracking-[.06em] text-[var(--faint)] hover:text-[var(--danger)]"
@@ -247,13 +238,36 @@ export function PanelClient({
             Próxima clase en vivo
           </div>
           <h3 className="mt-2 text-[16px] font-medium">
-            Clase en vivo — {course.titulo.split(/\s*[—:]\s*/)[0]}
+            {nextSession ? nextSession.titulo : `Clase en vivo — ${course.titulo.split(/\s*[—:]\s*/)[0]}`}
           </h3>
-          <p className="mt-1 text-[13px] text-[var(--dim)]">A confirmar</p>
+          <p className="mt-1 text-[13px] text-[var(--dim)]">
+            {nextSession
+              ? new Date(nextSession.fecha).toLocaleString("es-AR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "Sin clase agendada todavía"}
+          </p>
           <div className="mt-6">
-            <button className="inline-flex h-11 items-center border border-[var(--accent)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]">
-              Abrir sala de clase
-            </button>
+            {nextSession?.meetUrl ? (
+              <a
+                href={nextSession.meetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-11 items-center border border-[var(--accent)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
+              >
+                Abrir sala de clase
+              </a>
+            ) : (
+              <button
+                disabled
+                className="inline-flex h-11 cursor-not-allowed items-center border border-[var(--line2)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--faint)] opacity-60"
+              >
+                {nextSession ? "Sin link todavía" : "Sin clase agendada"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -281,38 +295,6 @@ export function PanelClient({
           <p className="mt-1 text-[13px] text-[var(--dim)]">
             {enrollment.medio === "Mercado Pago" ? "Pago único" : "Comprobante manual · sujeto a aprobación"}
           </p>
-        </div>
-
-        <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)]">
-          <div className="flex items-center justify-between border-b border-[var(--line)] px-6 py-4">
-            <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
-              Historial de pagos
-            </div>
-          </div>
-          {payments.length === 0 ? (
-            <div className="px-6 py-6 text-[13px] text-[var(--faint)]">
-              Todavía no hay pagos registrados.
-            </div>
-          ) : (
-            payments.map((p, i) => (
-              <div
-                key={p.id}
-                className={`grid grid-cols-[1.1fr_1fr_.9fr_auto] items-center gap-4 px-6 py-3.5 text-[13px] ${
-                  i !== payments.length - 1 ? "border-b border-[var(--line)]" : ""
-                }`}
-              >
-                <span>{p.mes}</span>
-                <span>{formatARS(p.monto)}</span>
-                <span className="text-[var(--dim)]">{p.medio}</span>
-                <span
-                  className="justify-self-end border border-[var(--line2)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.06em]"
-                  style={{ color: ESTADOS[p.estado as "activa" | "pendiente"].color }}
-                >
-                  {p.estadoLabel}
-                </span>
-              </div>
-            ))
-          )}
         </div>
 
         {otrosCursos.length > 0 && (

@@ -75,27 +75,6 @@ export async function getMyEnrollment(
   return data ? mapRow(data as EnrollmentRow, nombre) : null;
 }
 
-export interface PaymentRow {
-  id: number;
-  periodo: string;
-  monto: number;
-  medio: "Mercado Pago" | "Transferencia";
-  estado: string;
-}
-
-/** Historial de pagos reales de una matrícula del usuario logueado. */
-export async function getMyPayments(enrollmentId: number): Promise<PaymentRow[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .select("id, periodo, monto, medio, estado")
-    .eq("enrollment_id", enrollmentId)
-    .order("periodo", { ascending: false });
-
-  if (error) throw error;
-  return data;
-}
-
 export interface ModuleRow {
   id: number;
   numero: number;

@@ -377,11 +377,11 @@ export function DocenteClient({
               />
             </label>
             <label className="flex flex-col gap-1 text-[12px] text-[var(--faint)]">
-              Link de Google Meet (opcional)
+              Link de la clase (opcional)
               <input
                 value={nuevaMeetUrl}
                 onChange={(e) => setNuevaMeetUrl(e.target.value)}
-                placeholder="https://meet.google.com/..."
+                placeholder="Zoom, Google Meet, etc."
                 className="h-10 w-64 border border-[var(--line2)] bg-[var(--surface)] px-3 text-[13px]"
               />
             </label>
@@ -465,7 +465,7 @@ export function DocenteClient({
                     <input
                       value={editMeetUrl}
                       onChange={(e) => setEditMeetUrl(e.target.value)}
-                      placeholder="Link de Google Meet (opcional)"
+                      placeholder="Link de la clase (opcional)"
                       className="h-9 border border-[var(--line2)] bg-[var(--surface)] px-2.5 text-[13px]"
                     />
                     <div className="flex gap-2">
