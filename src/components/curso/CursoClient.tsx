@@ -37,7 +37,6 @@ export function CursoClient({
 }) {
   const [toast, setToast] = useState<string | null>(null);
   const [progressState, setProgressState] = useState(progress);
-  const mora = enrollment.estado === "mora";
 
   function flash(msg: string) {
     setToast(msg);
@@ -69,17 +68,11 @@ export function CursoClient({
   const rows = modules.map((m, i) => {
     const done = doneFlags[i];
     const unlockedBySequence = i === 0 || doneFlags[i - 1];
-    const locked = mora ? !done : !unlockedBySequence;
+    const locked = !unlockedBySequence;
 
-    const estadoLabel = done
-      ? "Completo"
-      : mora
-        ? "Sin acceso"
-        : unlockedBySequence
-          ? "Disponible"
-          : "Bloqueado";
+    const estadoLabel = done ? "Completo" : unlockedBySequence ? "Disponible" : "Bloqueado";
 
-    const btnLabel = done ? "Repasar" : mora ? "Sin acceso" : locked ? "Bloqueado" : "Marcar como completo";
+    const btnLabel = done ? "Repasar" : locked ? "Bloqueado" : "Marcar como completo";
 
     return { ...m, done, locked, estadoLabel, btnLabel, current: !done && !locked };
   });
@@ -204,7 +197,7 @@ export function CursoClient({
                 <button
                   onClick={() =>
                     m.locked
-                      ? flash(mora ? "Módulo sin acceso" : "Completá el módulo anterior primero")
+                      ? flash("Completá el módulo anterior primero")
                       : m.done
                         ? flash(`Repasando ${m.titulo}`)
                         : completeModule(m.id)

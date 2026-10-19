@@ -1,7 +1,6 @@
 "use client";
 
 import type { Course, Enrollment } from "@/lib/types";
-import { deudaTotal, moraRecargo } from "@/lib/business";
 import { formatARS } from "@/lib/format";
 import { StatusChip } from "@/components/ui/StatusChip";
 
@@ -11,19 +10,15 @@ export function FichaDrawer({
   historial,
   onClose,
   onUpdatePrice,
-  onToggleMora,
 }: {
   enrollment: Enrollment | null;
   course: Course | null;
   historial: string[];
   onClose: () => void;
   onUpdatePrice: (id: number) => void;
-  onToggleMora: (id: number) => void;
 }) {
   if (!enrollment || !course) return null;
 
-  const mora = enrollment.estado === "mora";
-  const recargo = mora ? moraRecargo(course, enrollment.cuota) : 0;
   const diff = course.precio - enrollment.cuota;
 
   return (
@@ -59,10 +54,10 @@ export function FichaDrawer({
             </div>
             <div>
               <div className="text-[11px] uppercase tracking-[.08em] text-[var(--faint)]">
-                Cuota congelada
+                Pagó
               </div>
               <div className="mt-1">
-                {formatARS(enrollment.cuota)} · desde {enrollment.desde}
+                {formatARS(enrollment.cuota)} · el {enrollment.desde}
               </div>
             </div>
             <div>
@@ -82,33 +77,12 @@ export function FichaDrawer({
             </div>
           </div>
 
-          {mora && (
-            <div className="mt-5 border-l-[3px] border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3.5 text-[13px] leading-[1.6]">
-              Debe {formatARS(deudaTotal(enrollment))}: la cuota a su valor
-              congelado {formatARS(enrollment.cuota)}
-              {recargo ? ` más ${formatARS(recargo)} de recargo` : ", sin recargo"}.
-              Pasado el período de gracia, sus próximas cuotas toman el
-              precio de lista vigente ({formatARS(course.precio)}).
-            </div>
-          )}
-
           <div className="mt-6 flex flex-col gap-3">
             <button
               onClick={() => onUpdatePrice(enrollment.id)}
               className="inline-flex h-11 items-center justify-center border border-[var(--line2)] text-[13px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
             >
-              Actualizar cuota al precio vigente
-            </button>
-            <button
-              onClick={() => onToggleMora(enrollment.id)}
-              className="inline-flex h-11 items-center justify-center border text-[13px] font-medium uppercase tracking-[.06em]"
-              style={{
-                borderColor: "var(--danger)",
-                background: mora ? "var(--danger-soft)" : "transparent",
-                color: "var(--danger)",
-              }}
-            >
-              {mora ? "Levantar la mora y reactivar acceso" : "Poner en mora (pausa el acceso)"}
+              Corregir lo pagado al precio vigente
             </button>
           </div>
 

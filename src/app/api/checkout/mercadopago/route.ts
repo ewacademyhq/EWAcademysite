@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCourseByCode } from "@/lib/data/courses";
 import { createPreference, isMercadoPagoConfigured } from "@/lib/mercadopago";
+import { isCourseStale } from "@/lib/business";
 import { todayISO } from "@/lib/date";
 
 /**
@@ -45,6 +46,13 @@ export async function POST(request: NextRequest) {
 
   if (existing?.estado === "activa") {
     return NextResponse.json({ mode: "already-active" });
+  }
+
+  if (!existing && isCourseStale(course)) {
+    return NextResponse.json(
+      { error: "Este curso ya no está disponible para nuevas matrículas." },
+      { status: 404 }
+    );
   }
 
   let enrollmentId = existing?.id as number | undefined;

@@ -6,7 +6,7 @@ import { BackLink } from "@/components/ui/BackLink";
 
 const TABS = [
   { key: "kpi", label: "KPIs", href: "/admin/kpi", title: "Tablero", subtitle: "Agosto 2026 · datos de muestra" },
-  { key: "pagos", label: "Pagos y mora", href: "/admin/pagos", title: "Pagos y mora", subtitle: "Cola manual y control de mora" },
+  { key: "pagos", label: "Pagos", href: "/admin/pagos", title: "Pagos", subtitle: "Cola manual de comprobantes y matrículas activas" },
   { key: "cursos", label: "Cursos", href: "/admin/cursos", title: "Cursos", subtitle: "Alta, edición y baja de cursos" },
   { key: "matriculas", label: "Matrículas", href: "/admin/matriculas", title: "Matrículas", subtitle: "Estado, cuotas y asignación" },
   { key: "economia", label: "Economía", href: "/admin/economia", title: "Economía", subtitle: "Reparto por curso y neto para la academia" },

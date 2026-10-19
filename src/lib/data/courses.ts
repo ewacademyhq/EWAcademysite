@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Course, CourseSession, MoraTipo, PagoTipo, Modalidad, Vertical } from "@/lib/types";
+import { isCourseStale } from "@/lib/business";
+import type { Course, CourseSession, PagoTipo, Modalidad, Vertical } from "@/lib/types";
 
 interface CourseRow {
   code: string;
@@ -13,8 +14,7 @@ interface CourseRow {
   pago_tipo: PagoTipo;
   pago_valor: number;
   comision: number;
-  mora_tipo: MoraTipo;
-  mora_valor: number;
+  contenido_actualizado_at: string | null;
   vendidos: number;
   vistas: number;
   drive_folder_url: string | null;
@@ -50,16 +50,16 @@ function mapRow(row: CourseRow): Course {
     comision: Number(row.comision),
     vendidos: row.vendidos,
     vistas: row.vistas,
-    moraTipo: row.mora_tipo,
-    moraValor: Number(row.mora_valor),
+    contenidoActualizadoAt: row.contenido_actualizado_at,
     driveFolderUrl: row.drive_folder_url,
     imagenUrl: row.imagen_url,
   };
 }
 
 const COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, vendidos, vistas, drive_folder_url, imagen_url, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, contenido_actualizado_at, vendidos, vistas, drive_folder_url, imagen_url, docente:users!docente_id(nombre)";
 
+/** Catálogo público — excluye los autogestionados que quedaron sin actualizar hace más de 6 meses (siguen accesibles para quien ya se matriculó, ver getCourseByCode). */
 export async function getCourses(): Promise<Course[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -68,7 +68,7 @@ export async function getCourses(): Promise<Course[]> {
     .order("code");
 
   if (error) throw error;
-  return (data as CourseRow[]).map(mapRow);
+  return (data as CourseRow[]).map(mapRow).filter((c) => !isCourseStale(c));
 }
 
 export async function getCourseByCode(code: string): Promise<Course | null> {

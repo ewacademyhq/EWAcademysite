@@ -16,10 +16,7 @@ const MAX_REVENUE = 16.2;
 
 export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollment[] }) {
   const activas = enroll.filter((e) => e.estado === "activa").length;
-  const enMora = enroll.filter((e) => e.estado === "mora");
-  const ingresoMes = enroll
-    .filter((e) => e.estado === "activa" || e.estado === "pendiente")
-    .reduce((a, e) => a + e.cuota, 0);
+  const facturacionTotal = courses.reduce((a, c) => a + c.precio * c.vendidos, 0);
   const maxSold = Math.max(0, ...courses.map((c) => c.vendidos));
   const verticales = new Set(courses.map((c) => c.vertical)).size;
 
@@ -30,10 +27,9 @@ export function KpiTab({ courses, enroll }: { courses: Course[]; enroll: Enrollm
   const conversion = totalVistas ? (pagosAcreditados / totalVistas) * 100 : 0;
 
   const tiles = [
-    { label: "Facturación del mes", value: formatShort(ingresoMes * 12), delta: "+8,4% vs. julio", color: "var(--good)", mark: "var(--accent)" },
+    { label: "Facturación total", value: formatShort(facturacionTotal), delta: `${courses.reduce((a, c) => a + c.vendidos, 0)} matrículas vendidas`, color: "var(--good)", mark: "var(--accent)" },
     { label: "Verticales activas", value: String(verticales), delta: `${courses.length} cursos publicados`, color: "var(--dim)", mark: "var(--accent)" },
     { label: "Matrículas activas", value: String(activas), delta: `${enroll.length} matrículas totales`, color: "var(--dim)", mark: "var(--accent)" },
-    { label: "Tasa de mora", value: `${enroll.length ? Math.round((enMora.length / enroll.length) * 100) : 0}%`, delta: `${enMora.length} alumnos pausados`, color: "var(--danger)", mark: "var(--danger)" },
     {
       label: "Conversión visita → pago",
       value: `${conversion.toFixed(2).replace(".", ",")}%`,

@@ -422,7 +422,7 @@ export function DocenteClient({
                   <StatusChip estado={s.estado} />
                   <ProgressBar
                     percent={parseInt(s.prog, 10)}
-                    tone={s.estado === "mora" ? "danger" : s.estado === "finalizada" ? "dim" : "accent"}
+                    tone={s.estado === "finalizada" ? "dim" : "accent"}
                   />
                   <span className="justify-self-end text-[var(--dim)]">{s.pago}</span>
                 </div>
@@ -430,8 +430,8 @@ export function DocenteClient({
             </div>
           </div>
           <div className="border-t border-[var(--line)] px-6 py-3 text-[12.5px] text-[var(--faint)]">
-            El estado de mora lo administra la dirección. Como docente lo
-            ves, pero no lo modificás.
+            El estado de la matrícula lo administra la dirección. Como
+            docente lo ves, pero no lo modificás.
           </div>
         </div>
 
@@ -623,7 +623,8 @@ export function DocenteClient({
                 {formatARS(liquidacion.total)}
               </div>
               <p className="mt-2 text-[13px] text-[var(--dim)]">
-                Te corresponde este mes, según tus cursos y alumnos activos.
+                Te corresponde este mes — en cohortes, según las clases que
+                diste; en autogestionados, por cada matrícula nueva.
               </p>
               <div className="mt-4 flex flex-col gap-px bg-[var(--line)]">
                 {liquidacion.cursos.map((c) => (
@@ -632,8 +633,7 @@ export function DocenteClient({
                     className="flex items-center justify-between bg-[var(--surface)] px-4 py-2.5 text-[13px]"
                   >
                     <span>
-                      {c.code} · {c.alumnos} {c.alumnos === 1 ? "alumno" : "alumnos"} ×{" "}
-                      {formatARS(c.pagoPorAlumno)}
+                      {c.code} · {c.detalle}
                     </span>
                     <span className="font-medium">{formatARS(c.total)}</span>
                   </div>

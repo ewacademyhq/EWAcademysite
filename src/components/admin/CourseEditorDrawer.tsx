@@ -22,9 +22,8 @@ export interface CourseDraft {
   comision: string;
   pagoTipo: PagoTipo;
   pagoValor: string;
-  moraTipo: "ninguno" | "pct" | "fijo";
-  moraValor: string;
-  graciaDias: string;
+  clasesTotales: string;
+  contenidoActualizadoAt: string;
   bolsillo: string;
   margen: string;
   desc: string;
@@ -50,9 +49,8 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
       comision: "6.2",
       pagoTipo: "pct",
       pagoValor: "35",
-      moraTipo: "pct",
-      moraValor: "5",
-      graciaDias: "5",
+      clasesTotales: "",
+      contenidoActualizadoAt: "",
       bolsillo: "28000",
       margen: "40",
       desc: "Descripción pendiente.",
@@ -75,9 +73,8 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
     comision: String(course.comision),
     pagoTipo: course.pagoTipo,
     pagoValor: String(course.pagoValor),
-    moraTipo: course.moraTipo || "pct",
-    moraValor: String(course.moraValor ?? 5),
-    graciaDias: String(course.graciaDias ?? 5),
+    clasesTotales: course.clasesTotales != null ? String(course.clasesTotales) : "",
+    contenidoActualizadoAt: course.contenidoActualizadoAt ?? "",
     bolsillo: String(Math.round(docentePagoOf(course))),
     margen: "40",
     desc: course.desc,
@@ -103,6 +100,7 @@ export function CourseEditorDrawer({
   onSave,
   onAssign,
   onCreateVertical,
+  onMarkUpdated,
   onRemoveStudent,
   onAddModule,
   onRenameModule,
@@ -120,6 +118,7 @@ export function CourseEditorDrawer({
   onSave: (course: Course, origCode: string | null) => void;
   onAssign: (person: PersonOption, motivo: string) => void;
   onCreateVertical: (nombre: string, prefijo: string) => Promise<boolean>;
+  onMarkUpdated: (code: string) => void;
   onRemoveStudent: (enrollmentId: number) => void;
   onAddModule: (titulo: string) => void;
   onRenameModule: (id: number, titulo: string) => void;
@@ -166,8 +165,7 @@ export function CourseEditorDrawer({
   const precio = Number(draft.precio) || 0;
   const pagoValor = Number(draft.pagoValor) || 0;
   const comision = Number(draft.comision) || 0;
-  const moraValor = Number(draft.moraValor) || 0;
-  const graciaDias = Number(draft.graciaDias) || 0;
+  const clasesTotales = Number(draft.clasesTotales) || 0;
   const bolsillo = Number(draft.bolsillo) || 0;
   const margen = Number(draft.margen) || 0;
   const minFechaFin = (() => {
@@ -188,12 +186,11 @@ export function CourseEditorDrawer({
   if (draft.titulo.trim().length < 5) errores.push("El título necesita al menos 5 caracteres.");
   if (!/^[A-Z]+-\d{3}$/.test(draft.code)) errores.push("El código va con formato VERTICAL-000, por ejemplo CIBER-101.");
   if (courses.some((c) => c.code === draft.code && c.code !== draft.origCode)) errores.push("Ese código ya lo usa otro curso.");
-  if (precio < PRECIO_MIN) errores.push(`El precio mensual no puede ser menor a ${formatARS(PRECIO_MIN)}.`);
+  if (precio < PRECIO_MIN) errores.push(`El precio no puede ser menor a ${formatARS(PRECIO_MIN)}.`);
   if (comision < 0 || comision > 15) errores.push("La comisión de pasarela va entre 0% y 15%.");
   if (draft.pagoTipo === "pct" && (pagoValor < 1 || pagoValor > 90)) errores.push("El porcentaje al docente va entre 1% y 90%.");
   if (draft.pagoTipo === "fijo" && (pagoValor < 1 || pagoValor >= precio)) errores.push("El monto fijo al docente tiene que ser mayor a 0 y menor al precio.");
-  if (draft.moraTipo !== "ninguno" && moraValor <= 0) errores.push("El recargo por mora tiene que ser mayor a 0.");
-  if (graciaDias < 0 || graciaDias > 30) errores.push("Los días de gracia van entre 0 y 30.");
+  if (draft.modalidad === "cohorte" && clasesTotales <= 0) errores.push("Las clases totales son obligatorias para un curso de cohorte.");
   if (draft.fechaFin && draft.fechaFin <= todayISO()) errores.push("La fecha de fin de cohorte tiene que ser posterior a hoy.");
   if (neto <= 0) errores.push("Con estos valores el neto para la academia queda en cero o negativo.");
 
@@ -211,9 +208,7 @@ export function CourseEditorDrawer({
       comision,
       pagoTipo: draft.pagoTipo,
       pagoValor,
-      moraTipo: draft.moraTipo,
-      moraValor,
-      graciaDias,
+      clasesTotales: draft.modalidad === "cohorte" ? clasesTotales : null,
       fechaFin: draft.modalidad === "cohorte" ? draft.fechaFin || null : null,
       desc: draft.desc,
       fecha: draft.fecha,
@@ -461,7 +456,7 @@ export function CourseEditorDrawer({
           {montoModo === "precio" ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass}>Precio mensual (ARS)</label>
+                <label className={labelClass}>Precio total (ARS)</label>
                 <input
                   className={`${inputClass} mt-2`}
                   value={draft.precio}
@@ -549,43 +544,19 @@ export function CourseEditorDrawer({
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>Recargo por mora</label>
-              <select
-                className={`${inputClass} mt-2`}
-                value={draft.moraTipo}
-                onChange={(e) => patch("moraTipo", e.target.value as CourseDraft["moraTipo"])}
-              >
-                <option value="ninguno">Ninguno</option>
-                <option value="pct">Porcentaje de la cuota</option>
-                <option value="fijo">Monto fijo (ARS)</option>
-              </select>
-            </div>
-            {draft.moraTipo !== "ninguno" && (
+          {draft.modalidad === "cohorte" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass}>
-                  {draft.moraTipo === "fijo" ? "Recargo fijo (ARS)" : "Recargo (% de la cuota)"}
-                </label>
+                <label className={labelClass}>Cantidad total de clases</label>
                 <input
                   className={`${inputClass} mt-2`}
-                  value={draft.moraValor}
-                  onChange={(e) => patch("moraValor", e.target.value.replace(/[^0-9.]/g, ""))}
+                  value={draft.clasesTotales}
+                  onChange={(e) => patch("clasesTotales", e.target.value.replace(/[^0-9]/g, ""))}
                 />
+                <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+                  Es el denominador fijo del pago al docente (clases dadas en el mes ÷ este número). No lo cambies una vez empezado el cursado salvo que haga falta corregirlo.
+                </p>
               </div>
-            )}
-            <div>
-              <label className={labelClass}>Días de gracia</label>
-              <input
-                className={`${inputClass} mt-2`}
-                value={draft.graciaDias}
-                onChange={(e) => patch("graciaDias", e.target.value.replace(/[^0-9]/g, ""))}
-              />
-              <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
-                Días después del vencimiento (día 10) antes de pasar a mora.
-              </p>
-            </div>
-            {draft.modalidad === "cohorte" && (
               <div>
                 <label className={labelClass}>Fin de cohorte</label>
                 <input
@@ -600,8 +571,32 @@ export function CourseEditorDrawer({
                   finalizan solas en esa fecha. Tiene que ser una fecha futura.
                 </p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {draft.modalidad === "continuo" && (
+            <div className="border border-[var(--line2)] bg-[var(--surface)] p-4">
+              <div className={labelClass}>Contenido</div>
+              <p className="mt-2 text-[13px] text-[var(--dim)]">
+                {draft.contenidoActualizadoAt
+                  ? `Actualizado por última vez el ${new Date(draft.contenidoActualizadoAt).toLocaleDateString("es-AR")}.`
+                  : "Todavía no se marcó ninguna actualización."}{" "}
+                Si pasan más de 6 meses sin actualizarlo, deja de ofrecerse en el catálogo público (quien ya se matriculó no pierde el acceso).
+              </p>
+              {draft.origCode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onMarkUpdated(draft.origCode!);
+                    patch("contenidoActualizadoAt", new Date().toISOString());
+                  }}
+                  className="mt-3 h-9 border border-[var(--line2)] px-4 text-[12px] font-medium uppercase tracking-[.06em] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                >
+                  Marcar como actualizado
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="border border-[var(--line)] bg-[var(--surface)] p-5">
             <div className="flex flex-col gap-2 text-[13.5px]">
@@ -623,20 +618,9 @@ export function CourseEditorDrawer({
                   {formatARS(neto)}
                 </span>
               </div>
-              <div className="flex justify-between text-[var(--dim)]">
-                <span>Mora</span>
-                <span>
-                  {draft.moraTipo === "ninguno"
-                    ? "sin recargo"
-                    : draft.moraTipo === "pct"
-                      ? `+ ${moraValor}% de la cuota`
-                      : `+ ${formatARS(moraValor)}`}
-                </span>
-              </div>
             </div>
             <p className="mt-3 text-[12px] leading-[1.5] text-[var(--faint)]">
-              {netoPct}% del precio queda para la academia. Cambiar el
-              precio no toca las cuotas ya congeladas.
+              {netoPct}% del precio queda para la academia, por cada alumno que paga una vez.
             </p>
           </div>
 

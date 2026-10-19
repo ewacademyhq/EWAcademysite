@@ -40,9 +40,7 @@ function courseToRow(c: Course) {
     pago_tipo: c.pagoTipo,
     pago_valor: c.pagoValor,
     comision: c.comision,
-    mora_tipo: c.moraTipo ?? "pct",
-    mora_valor: c.moraValor ?? 5,
-    gracia_dias: c.graciaDias ?? 5,
+    clases_totales: c.modalidad === "cohorte" ? c.clasesTotales ?? null : null,
     vendidos: c.vendidos,
     vistas: c.vistas,
     imagen_url: c.imagenUrl ?? null,
@@ -229,7 +227,7 @@ export function AdminClient({
         return;
       }
       setCourses((cs) => cs.map((c) => (c.code === origCode ? course : c)));
-      flash("Curso actualizado — las cuotas congeladas no cambian");
+      flash("Curso actualizado — lo que ya pagaron los matriculados no cambia");
     }
     closeEditor();
   }
@@ -327,8 +325,6 @@ export function AdminClient({
       flash(`No se pudo aprobar: ${e1.message}`);
       return;
     }
-    // ultimo_pago_at queda registrado acá porque de eso depende el chequeo
-    // de mora (Fase 5) para saber si ya se pagó el período vigente.
     const { error: e2 } = await supabase
       .from("enrollments")
       .update({ estado: "activa", ultimo_pago_at: hoy })
@@ -484,10 +480,17 @@ export function AdminClient({
     flash(`${e.nombre}: ${ESTADOS[e.estado].label} → ${ESTADOS[estado].label} (corrección forzada) · ${adminNombre}`);
   }
 
-  function toggleMora(id: number) {
-    const e = enroll.find((x) => x.id === id);
-    if (!e) return;
-    changeEstado(id, e.estado === "mora" ? "activa" : "mora");
+  async function marcarContenidoActualizado(code: string) {
+    const supabase = createClient();
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase.from("courses").update({ contenido_actualizado_at: nowIso }).eq("code", code);
+    if (error) {
+      flash(`No se pudo marcar como actualizado: ${error.message}`);
+      return;
+    }
+    setCourses((cs) => cs.map((c) => (c.code === code ? { ...c, contenidoActualizadoAt: nowIso } : c)));
+    setEditingCourse((c) => (c && c.code === code ? { ...c, contenidoActualizadoAt: nowIso } : c));
+    flash("Curso marcado como actualizado");
   }
 
   async function updatePrice(id: number) {
@@ -617,7 +620,6 @@ export function AdminClient({
           courses={courses}
           onChangeEstado={changeEstado}
           onForceEstado={forceEstado}
-          onToggleMora={toggleMora}
           onOpenFicha={setFichaId}
         />
       )}
@@ -645,6 +647,7 @@ export function AdminClient({
         onSave={saveCourse}
         onAssign={assignStudent}
         onCreateVertical={crearVertical}
+        onMarkUpdated={marcarContenidoActualizado}
         onRemoveStudent={removeStudent}
         onAddModule={addModule}
         onRenameModule={renameModule}
@@ -657,7 +660,6 @@ export function AdminClient({
         historial={fichaHistorial.map((h) => h.txt)}
         onClose={() => setFichaId(null)}
         onUpdatePrice={updatePrice}
-        onToggleMora={toggleMora}
       />
 
       <DeleteDialog target={dialog} onCancel={() => setDialog(null)} onConfirm={confirmDelete} />

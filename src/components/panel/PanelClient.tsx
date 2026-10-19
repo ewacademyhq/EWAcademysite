@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Course, Enrollment } from "@/lib/types";
 import type { PaymentRow } from "@/lib/data/mycourse";
-import { deudaTotal, moraRecargo, ESTADOS } from "@/lib/business";
+import { ESTADOS } from "@/lib/business";
 import { isoToDMY, bajaEfectivaLabel } from "@/lib/date";
 import { formatARS } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
@@ -40,23 +40,6 @@ const today = new Intl.DateTimeFormat("es-AR", {
 }).format(new Date());
 const todayLabel = today.charAt(0).toUpperCase() + today.slice(1);
 
-function diaDiez(offsetMonths: number): string {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + offsetMonths);
-  d.setDate(10);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function proximoVencimiento(mora: boolean): string {
-  if (!mora) {
-    const now = new Date();
-    return diaDiez(now.getDate() > 10 ? 1 : 0);
-  }
-  const now = new Date();
-  return diaDiez(now.getDate() <= 10 ? -1 : 0);
-}
-
 export function PanelClient({
   enrollments,
   courses,
@@ -72,10 +55,7 @@ export function PanelClient({
   const [toast, setToast] = useState<string | null>(null);
   const enrollment = enroll.find((e) => e.code === code) ?? enroll[0];
   const course = courses.find((c) => c.code === enrollment?.code);
-  const mora = enrollment?.estado === "mora";
-  const recargo = mora && course ? moraRecargo(course, enrollment.cuota) : 0;
   const asDropdown = enroll.length > 5;
-  const vencimiento = enrollment ? proximoVencimiento(mora) : "";
   const otrosCursos = courses.filter((c) => !enroll.some((e) => e.code === c.code));
 
   function flash(msg: string) {
@@ -115,7 +95,7 @@ export function PanelClient({
     mes: isoToDMY(p.periodo),
     monto: Number(p.monto),
     medio: p.medio,
-    estado: p.estado === "acreditado" ? "activa" : "mora",
+    estado: p.estado === "acreditado" ? "activa" : "pendiente",
     estadoLabel: p.estado === "acreditado" ? "Pagada" : p.estado,
   }));
 
@@ -209,45 +189,6 @@ export function PanelClient({
       </div>
 
       <div className="grid grid-cols-12 gap-4 px-[34px] py-6">
-        {mora && (
-          <div
-            className="col-span-12 border-l-4 border-[var(--danger)] bg-[var(--danger-soft)] p-6"
-            style={{ animation: "slideUp .3s ease" }}
-          >
-            <h2 className="text-[17px] font-medium">Matrícula pausada por mora</h2>
-            <p className="mt-2 text-[14.5px] leading-[1.6]">
-              La cuota venció el {vencimiento} y pasaron los días de gracia. El
-              acceso a material y clases en vivo está suspendido — tu
-              progreso y tus entregas siguen guardados.
-            </p>
-            <p className="mt-3 text-[13.5px] leading-[1.6] text-[var(--dim)]">
-              Regularizás por{" "}
-              <strong className="font-medium text-[var(--text)]">
-                {formatARS(deudaTotal(enrollment))}
-              </strong>
-              : la cuota vencida a su valor congelado de{" "}
-              {formatARS(enrollment.cuota)}
-              {recargo
-                ? ` más ${formatARS(recargo)} de recargo por mora`
-                : ", sin recargo por mora"}
-              . Como pasaste el período de gracia, desde el mes que viene tu
-              cuota pasa a {formatARS(course.precio)}, el precio de lista
-              vigente.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link
-                href={`/checkout/${course.code}`}
-                className="inline-flex h-11 items-center bg-[var(--danger)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-white"
-              >
-                Regularizar {formatARS(deudaTotal(enrollment))}
-              </Link>
-              <button className="inline-flex h-11 items-center border border-[var(--danger)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--danger)]">
-                Subir comprobante
-              </button>
-            </div>
-          </div>
-        )}
-
         <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-7">
           <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--accent)]">
             {course.code}
@@ -260,7 +201,7 @@ export function PanelClient({
           <div className="mt-5">
             <ProgressBar
               percent={parseInt(enrollment.prog, 10)}
-              tone={mora ? "danger" : "accent"}
+              tone="accent"
               key={enrollment.code}
             />
           </div>
@@ -310,43 +251,15 @@ export function PanelClient({
           </h3>
           <p className="mt-1 text-[13px] text-[var(--dim)]">A confirmar</p>
           <div className="mt-6">
-            {mora ? (
-              <div className="border border-[var(--line)] bg-[var(--surface2)] px-4 py-3.5 text-[13px] text-[var(--faint)]">
-                Acceso suspendido hasta regularizar
-              </div>
-            ) : (
-              <button className="inline-flex h-11 items-center border border-[var(--accent)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]">
-                Abrir sala de clase
-              </button>
-            )}
+            <button className="inline-flex h-11 items-center border border-[var(--accent)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]">
+              Abrir sala de clase
+            </button>
           </div>
         </div>
 
         <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 sm:col-span-6 lg:col-span-4">
           <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
-            Próximo vencimiento
-          </div>
-          <div
-            className="mt-3 font-bold"
-            style={{
-              fontFamily: "var(--font-humane)",
-              fontSize: "62px",
-              lineHeight: 0.8,
-              color: mora ? "var(--danger)" : "var(--text)",
-            }}
-          >
-            {vencimiento}
-          </div>
-          <p className="mt-3 text-[13px] leading-[1.5] text-[var(--dim)]">
-            {mora
-              ? "Vencida. Regularizá para reactivar el acceso."
-              : `${formatARS(enrollment.cuota)} · débito automático con Mercado Pago.`}
-          </p>
-        </div>
-
-        <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 sm:col-span-6 lg:col-span-4">
-          <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
-            Tu cuota
+            Pagaste
           </div>
           <div
             className="mt-3 font-bold text-[var(--text)]"
@@ -355,8 +268,8 @@ export function PanelClient({
             {formatARS(enrollment.cuota)}
           </div>
           <p className="mt-3 text-[13px] leading-[1.5] text-[var(--dim)]">
-            Congelada al matricularte el {enrollment.desde}. Precio actual
-            del curso: {formatARS(course.precio)}.
+            El {enrollment.desde}. Precio actual del curso:{" "}
+            {formatARS(course.precio)}.
           </p>
         </div>
 
@@ -366,13 +279,8 @@ export function PanelClient({
           </div>
           <h3 className="mt-3 text-[16px] font-medium">{enrollment.medio}</h3>
           <p className="mt-1 text-[13px] text-[var(--dim)]">
-            {enrollment.medio === "Mercado Pago"
-              ? "Débito automático · vence el 10 de cada mes"
-              : "Comprobante manual · sujeto a aprobación"}
+            {enrollment.medio === "Mercado Pago" ? "Pago único" : "Comprobante manual · sujeto a aprobación"}
           </p>
-          <button className="mt-5 inline-flex h-10 items-center border border-[var(--line2)] px-4 text-[12px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]">
-            Cambiar
-          </button>
         </div>
 
         <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)]">
@@ -398,7 +306,7 @@ export function PanelClient({
                 <span className="text-[var(--dim)]">{p.medio}</span>
                 <span
                   className="justify-self-end border border-[var(--line2)] px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.06em]"
-                  style={{ color: ESTADOS[p.estado as "activa" | "mora"].color }}
+                  style={{ color: ESTADOS[p.estado as "activa" | "pendiente"].color }}
                 >
                   {p.estadoLabel}
                 </span>

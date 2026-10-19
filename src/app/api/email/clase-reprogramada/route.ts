@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     .from("enrollments")
     .select("users!user_id(nombre, email)")
     .eq("course_code", courseCode)
-    .in("estado", ["activa", "mora"]);
+    .eq("estado", "activa");
 
   if (alumnosError) {
     return NextResponse.json({ error: alumnosError.message }, { status: 500 });

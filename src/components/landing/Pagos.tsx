@@ -1,9 +1,9 @@
 import { Reveal } from "@/components/ui/Reveal";
 
 const steps = [
-  { kicker: "Paso 01", title: "Elegís medio de pago", body: "Mercado Pago con débito automático, o transferencia con comprobante." },
+  { kicker: "Paso 01", title: "Elegís medio de pago", body: "Mercado Pago o transferencia con comprobante." },
   { kicker: "Paso 02", title: "Se acredita", body: "Al instante con Mercado Pago, o en hasta 24 h hábiles si mandás comprobante." },
-  { kicker: "Paso 03", title: "Precio congelado", body: "Tu cuota queda fija al valor del día que te matriculaste, aunque el curso suba." },
+  { kicker: "Paso 03", title: "Accedés al toque", body: "Un solo pago por el precio total del curso — sin cuotas ni vencimientos." },
 ];
 
 export function Pagos() {
@@ -21,20 +21,18 @@ export function Pagos() {
             className="mt-3 font-bold uppercase text-[var(--text)]"
             style={{ fontFamily: "var(--font-humane)", fontSize: "76px", lineHeight: 0.85 }}
           >
-            Sin sorpresas
+            Pago único
           </h2>
           <p className="mt-6 max-w-[70ch] text-[16px] leading-[1.6] text-[var(--dim)]">
-            Tu cuota queda congelada al valor del día que te matriculaste,
-            independiente de si el curso sube de precio después. Tenés 5 días
-            de gracia después del vencimiento; pasada la gracia, se suspende
-            el acceso a material y clases en vivo hasta que regularices —
-            aunque tu progreso y entregas siguen guardados.
+            Cada curso tiene un precio total único, informado antes de pagar.
+            Un solo pago y listo — sin mensualidades, sin vencimientos, sin
+            letra chica.
           </p>
         </Reveal>
 
         <Reveal
           as="div"
-          className="mt-10 grid grid-cols-1 gap-px bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-10 grid grid-cols-1 gap-px bg-[var(--line)] sm:grid-cols-3"
         >
           {steps.map((step) => (
             <div key={step.kicker} className="bg-[var(--bg2)] p-[24px]">
@@ -47,17 +45,6 @@ export function Pagos() {
               </p>
             </div>
           ))}
-          <div className="border-t-[3px] border-[var(--danger)] bg-[var(--bg2)] p-[24px]">
-            <div className="text-[11px] font-medium uppercase tracking-[.14em] text-[var(--danger)]">
-              Si vence
-            </div>
-            <h3 className="mt-3 text-[16px] font-medium">Pausa por mora</h3>
-            <p className="mt-2 text-[14px] leading-[1.5] text-[var(--dim)]">
-              Se suspende el acceso a material y clases en vivo hasta
-              regularizar la cuota vencida a su valor congelado, más el
-              recargo si el curso tiene uno.
-            </p>
-          </div>
         </Reveal>
       </div>
     </section>

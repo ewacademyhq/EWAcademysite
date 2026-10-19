@@ -12,14 +12,12 @@ export function MatriculasTab({
   courses,
   onChangeEstado,
   onForceEstado,
-  onToggleMora,
   onOpenFicha,
 }: {
   enroll: Enrollment[];
   courses: Course[];
   onChangeEstado: (id: number, estado: EstadoMatricula) => void;
   onForceEstado: (id: number, estado: EstadoMatricula, nota: string) => void;
-  onToggleMora: (id: number) => void;
   onOpenFicha: (id: number) => void;
 }) {
   const [forceTarget, setForceTarget] = useState<Enrollment | null>(null);
@@ -27,15 +25,13 @@ export function MatriculasTab({
   return (
     <div className="px-[34px] py-6">
       <div className="mb-4 flex flex-col gap-1 text-[12.5px] text-[var(--faint)]">
-        <p>Poner en mora es exclusivo de este panel.</p>
         <p>
           Una matrícula pasa a <strong className="font-medium text-[var(--text)]">Finalizada</strong>{" "}
-          en la fecha de fin del cohorte si las cuotas están al día; si quedó
-          debiendo va a <strong className="font-medium text-[var(--text)]">Finalizada con deuda</strong>.
-          Esos dos estados son terminales — para corregir un error de carga
-          usá &quot;Forzar corrección&quot;, que pide un motivo y queda en la auditoría.
-          El resto de los cambios de estado queda registrado igual, con quién
-          lo hizo y cuándo.
+          en la fecha de fin del cohorte, o a los 30 días de una baja pedida
+          por el alumno. Es un estado terminal — para corregir un error de
+          carga usá &quot;Forzar corrección&quot;, que pide un motivo y queda en la
+          auditoría. El resto de los cambios de estado queda registrado
+          igual, con quién lo hizo y cuándo.
         </p>
       </div>
 
@@ -45,7 +41,7 @@ export function MatriculasTab({
             <span>Alumno</span>
             <span>Curso</span>
             <span>Estado</span>
-            <span>Cuota congelada</span>
+            <span>Pagó</span>
             <span>Precio de hoy</span>
             <span className="justify-self-end">Acciones</span>
           </div>
@@ -110,19 +106,6 @@ export function MatriculasTab({
                   >
                     Ficha
                   </button>
-                  {!terminal && (
-                    <button
-                      onClick={() => onToggleMora(e.id)}
-                      className="h-8 border px-3 text-[11.5px] font-medium uppercase tracking-[.06em]"
-                      style={{
-                        borderColor: e.estado === "mora" ? "var(--danger)" : "var(--line2)",
-                        background: e.estado === "mora" ? "var(--danger-soft)" : "transparent",
-                        color: e.estado === "mora" ? "var(--danger)" : "var(--text)",
-                      }}
-                    >
-                      {e.estado === "mora" ? "Levantar mora" : "Poner en mora"}
-                    </button>
-                  )}
                 </div>
               </div>
             );

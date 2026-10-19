@@ -5,7 +5,6 @@ import type {
   Enrollment,
   EstadoMatricula,
   Modalidad,
-  MoraTipo,
   PagoTipo,
   Receipt,
   Vertical,
@@ -47,9 +46,8 @@ interface AdminCourseRow {
   pago_tipo: PagoTipo;
   pago_valor: number;
   comision: number;
-  mora_tipo: MoraTipo;
-  mora_valor: number;
-  gracia_dias: number;
+  clases_totales: number | null;
+  contenido_actualizado_at: string | null;
   vendidos: number;
   vistas: number;
   imagen_url: string | null;
@@ -79,16 +77,15 @@ function mapCourseRow(row: AdminCourseRow): Course {
     comision: Number(row.comision),
     vendidos: row.vendidos,
     vistas: row.vistas,
-    moraTipo: row.mora_tipo,
-    moraValor: Number(row.mora_valor),
-    graciaDias: row.gracia_dias,
+    clasesTotales: row.clases_totales,
+    contenidoActualizadoAt: row.contenido_actualizado_at,
     fechaFin: row.modalidad === "cohorte" ? row.fecha_fin : null,
     imagenUrl: row.imagen_url,
   };
 }
 
 const ADMIN_COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, mora_tipo, mora_valor, gracia_dias, vendidos, vistas, imagen_url, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, clases_totales, contenido_actualizado_at, vendidos, vistas, imagen_url, docente:users!docente_id(nombre)";
 
 export async function getAdminCourses(): Promise<Course[]> {
   const supabase = await createClient();

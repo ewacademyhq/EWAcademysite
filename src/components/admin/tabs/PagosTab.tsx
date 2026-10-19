@@ -18,7 +18,7 @@ export function PagosTab({
   onApproveAll: () => void;
   onOpenFicha: (id: number) => void;
 }) {
-  const enMora = enroll.filter((e) => e.estado === "mora");
+  const activas = enroll.filter((e) => e.estado === "activa");
 
   return (
     <div className="grid grid-cols-12 gap-4 px-[34px] py-6">
@@ -93,28 +93,28 @@ export function PagosTab({
       </div>
 
       <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] lg:col-span-5">
-        <div className="border-b border-[var(--line)] bg-[var(--danger-soft)] px-6 py-4">
+        <div className="border-b border-[var(--line)] bg-[var(--good-soft)] px-6 py-4">
           <div
-            className="font-bold text-[var(--danger)]"
+            className="font-bold text-[var(--good)]"
             style={{ fontFamily: "var(--font-humane)", fontSize: "56px", lineHeight: 0.8 }}
           >
-            {enMora.length}
+            {activas.length}
           </div>
           <div className="mt-1 text-[13px] text-[var(--dim)]">
-            de {enroll.length} · {Math.round((enMora.length / enroll.length) * 1000) / 10}%
+            matrículas activas de {enroll.length} totales
           </div>
         </div>
-        {enMora.map((e, i) => (
+        {activas.map((e, i) => (
           <div
             key={e.id}
             className={`flex items-center justify-between gap-4 px-6 py-4 ${
-              i !== enMora.length - 1 ? "border-b border-[var(--line)]" : ""
+              i !== activas.length - 1 ? "border-b border-[var(--line)]" : ""
             }`}
           >
             <div>
               <div className="text-[14px]">{e.nombre}</div>
-              <div className="mt-1 text-[12.5px] text-[var(--danger)]">
-                vencida desde {e.pago} · {formatARS(e.cuota)}
+              <div className="mt-1 text-[12.5px] text-[var(--dim)]">
+                pagó el {e.pago} · {formatARS(e.cuota)}
               </div>
             </div>
             <button

@@ -37,7 +37,7 @@ export function navFor(role: Role, defaultCourseCode: string): NavItem[] {
 
   return [
     { label: "KPIs", href: "/admin/kpi", isActive: (p) => p === "/admin/kpi" },
-    { label: "Pagos y mora", href: "/admin/pagos", isActive: (p) => p === "/admin/pagos" },
+    { label: "Pagos", href: "/admin/pagos", isActive: (p) => p === "/admin/pagos" },
     { label: "Cursos", href: "/admin/cursos", isActive: (p) => p === "/admin/cursos" },
     { label: "Matrículas", href: "/admin/matriculas", isActive: (p) => p === "/admin/matriculas" },
     { label: "Economía", href: "/admin/economia", isActive: (p) => p === "/admin/economia" },

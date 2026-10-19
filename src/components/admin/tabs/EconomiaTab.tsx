@@ -7,7 +7,9 @@ export function EconomiaTab({ courses, enroll }: { courses: Course[]; enroll: En
     const pagoDocente = docentePagoOf(c);
     const comision = (c.precio * (c.comision || 0)) / 100;
     const neto = c.precio - pagoDocente - comision;
-    const alumnos = enroll.filter((e) => e.code === c.code && e.estado !== "finalizada").length;
+    // Pago único: cuentan los que pagaron alguna vez (activa o finalizada),
+    // no los que todavía están "pendiente" de aprobación.
+    const alumnos = enroll.filter((e) => e.code === c.code && e.estado !== "pendiente").length;
     return {
       code: c.code,
       titulo: c.titulo,
@@ -17,11 +19,11 @@ export function EconomiaTab({ courses, enroll }: { courses: Course[]; enroll: En
       docenteRegla: c.pagoTipo === "pct" ? `${c.pagoValor}% del precio` : "fijo por alumno",
       comision,
       neto,
-      netoMensual: neto * alumnos,
+      netoTotal: neto * alumnos,
     };
   });
 
-  const netoTotal = rows.reduce((a, r) => a + r.netoMensual, 0);
+  const netoTotal = rows.reduce((a, r) => a + r.netoTotal, 0);
 
   return (
     <div className="px-[34px] py-6">
@@ -33,7 +35,7 @@ export function EconomiaTab({ courses, enroll }: { courses: Course[]; enroll: En
             <span>− Docente</span>
             <span>− Comisión</span>
             <span>Neto / alumno</span>
-            <span>Neto mensual</span>
+            <span>Neto total</span>
           </div>
           {rows.map((r) => (
             <div
@@ -55,12 +57,12 @@ export function EconomiaTab({ courses, enroll }: { courses: Course[]; enroll: En
               <span style={{ color: r.neto / r.precio < 0.4 ? "var(--danger)" : "var(--good)" }}>
                 {formatARS(r.neto)}
               </span>
-              <span>{formatShort(r.netoMensual)}</span>
+              <span>{formatShort(r.netoTotal)}</span>
             </div>
           ))}
           <div className="flex items-center justify-between border-t-2 border-[var(--line)] bg-[var(--surface2)] px-6 py-4">
             <span className="text-[13px] font-medium uppercase tracking-[.06em]">
-              Neto mensual total
+              Neto total
             </span>
             <span
               className="font-bold text-[var(--accent)]"

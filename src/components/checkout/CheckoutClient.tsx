@@ -393,8 +393,7 @@ export function CheckoutClient({
                 </span>
               </span>
               <span className="mt-1 block text-[13.5px] leading-[1.5] text-[var(--dim)]">
-                Débito automático mensual. Acceso inmediato y sin cortes por
-                olvido.
+                Pago único. Acceso inmediato a todo el curso.
               </span>
             </span>
           </button>
@@ -467,7 +466,7 @@ export function CheckoutClient({
 
           <div className="mt-4 flex flex-col gap-3 text-[14px]">
             <div className="flex items-center justify-between">
-              <span className="text-[var(--dim)]">Mensualidad</span>
+              <span className="text-[var(--dim)]">Precio del curso</span>
               <span>{formatARS(course.precio)}</span>
             </div>
             <div className="flex items-center justify-between">
@@ -493,11 +492,7 @@ export function CheckoutClient({
           </div>
 
           <p className="mt-4 text-[13px] leading-[1.5] text-[var(--dim)]">
-            Esta cuota queda{" "}
-            <strong className="text-[var(--text)]">
-              congelada en {formatARS(course.precio)}
-            </strong>{" "}
-            mientras tu matrícula siga activa, aunque el curso aumente.
+            Pago único — no hay cuotas ni vencimientos.
           </p>
 
           <button
@@ -520,8 +515,8 @@ export function CheckoutClient({
           )}
 
           <p className="mt-4 text-[12px] leading-[1.5] text-[var(--faint)]">
-            Podés cancelar la recurrencia cuando quieras. La baja aplica al
-            fin del período pagado.
+            Si después querés dar de baja el curso, podés informarlo desde tu
+            panel con 30 días de aviso.
           </p>
         </div>
       </aside>

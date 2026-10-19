@@ -36,7 +36,7 @@ export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
             className="mt-3 font-bold uppercase text-[var(--text)]"
             style={{ fontFamily: "var(--font-humane)", fontSize: "76px", lineHeight: 0.85 }}
           >
-            Cuatro verticales
+            Especializaciones
           </h2>
         </Reveal>
 
@@ -108,7 +108,7 @@ export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
                       {formatARS(course.precio)}
                     </span>
                     <span className="text-[11px] uppercase tracking-[.1em] text-[var(--faint)]">
-                      por mes
+                      pago único
                     </span>
                   </div>
                   <div className="mt-2 text-[13px] text-[var(--dim)]">
