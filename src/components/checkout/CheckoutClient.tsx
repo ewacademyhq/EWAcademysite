@@ -10,6 +10,21 @@ import { createClient } from "@/lib/supabase/client";
 
 type PayMethod = "mp" | "manual";
 
+// Última actualización declarada en /terminos y /privacidad — si se
+// actualizan esos documentos, este valor tiene que cambiar junto con ellos.
+const VERSION_DOCUMENTOS_LEGALES = "13 de octubre de 2026";
+
+function calcularEdad(fechaISO: string): number {
+  const nacimiento = new Date(fechaISO);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const aunNoCumplio =
+    hoy.getMonth() < nacimiento.getMonth() ||
+    (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
+  if (aunNoCumplio) edad -= 1;
+  return edad;
+}
+
 export function CheckoutClient({
   course,
   user,
@@ -24,6 +39,8 @@ export function CheckoutClient({
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
 
@@ -39,7 +56,8 @@ export function CheckoutClient({
   const fechaLabel =
     course.fecha === "Inmediato" ? "ingreso inmediato" : `inicia ${course.fecha}`;
 
-  const disabled = paying || confirmed || creatingAccount || (pay === "manual" && !file);
+  const disabled =
+    paying || confirmed || creatingAccount || (pay === "manual" && !file) || (!account && !acceptedTerms);
 
   async function handleConfirm() {
     if (disabled) return;
@@ -54,6 +72,18 @@ export function CheckoutClient({
         );
         return;
       }
+      if (!fechaNacimiento) {
+        setAccountError("Completá tu fecha de nacimiento.");
+        return;
+      }
+      if (calcularEdad(fechaNacimiento) < 18) {
+        setAccountError("Tenés que ser mayor de 18 años para registrarte.");
+        return;
+      }
+      if (!acceptedTerms) {
+        setAccountError("Tenés que aceptar los Términos y Condiciones y la Política de Privacidad.");
+        return;
+      }
 
       setCreatingAccount(true);
       setAccountError(null);
@@ -62,17 +92,30 @@ export function CheckoutClient({
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { nombre: nombre.trim() } },
+        options: { data: { nombre: nombre.trim(), fecha_nacimiento: fechaNacimiento } },
       });
 
-      setCreatingAccount(false);
-
       if (error || !data.user) {
+        setCreatingAccount(false);
         setAccountError(
           error?.message.toLowerCase().includes("already registered")
             ? "Ese email ya tiene una cuenta en EW Academy. Iniciá sesión y volvé a matricularte."
             : `No pudimos crear tu cuenta: ${error?.message ?? "error desconocido"}`
         );
+        return;
+      }
+
+      // Sin este registro el checkbox no prueba nada — si falla, cortamos
+      // igual que si hubiera fallado la creación de la cuenta.
+      const { error: consentError } = await supabase.from("aceptaciones_legales").insert({
+        user_id: data.user.id,
+        version: VERSION_DOCUMENTOS_LEGALES,
+      });
+
+      setCreatingAccount(false);
+
+      if (consentError) {
+        setAccountError(`No se pudo registrar la aceptación de los términos: ${consentError.message}`);
         return;
       }
 
@@ -266,6 +309,21 @@ export function CheckoutClient({
                 className="h-12 w-full border border-[var(--line2)] bg-[var(--surface)] px-4 text-[14.5px] placeholder:text-[var(--faint)]"
               />
             </div>
+            <div>
+              <label className="text-[12px] uppercase tracking-[.06em] text-[var(--faint)]">
+                Fecha de nacimiento
+              </label>
+              <input
+                type="date"
+                value={fechaNacimiento}
+                onChange={(e) => setFechaNacimiento(e.target.value)}
+                disabled={confirmed}
+                className="mt-1.5 h-12 w-full border border-[var(--line2)] bg-[var(--surface)] px-4 text-[14.5px] text-[var(--text)]"
+              />
+              <p className="mt-1.5 text-[12px] leading-[1.5] text-[var(--faint)]">
+                Academia EW es solo para mayores de 18 años — la usamos para verificarlo.
+              </p>
+            </div>
             <p className="text-[12px] leading-[1.5] text-[var(--faint)]">
               Con esto creamos tu cuenta de alumno. Si ya tenés una,{" "}
               <a href="/login" className="text-[var(--accent)] hover:underline">
@@ -273,6 +331,36 @@ export function CheckoutClient({
               </a>{" "}
               antes de matricularte.
             </p>
+            <label className="flex items-start gap-2.5 text-[13px] leading-[1.5] text-[var(--dim)]">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                disabled={confirmed}
+                className="mt-0.5 h-[18px] w-[18px] shrink-0 accent-[var(--accent)]"
+              />
+              <span>
+                Acepto los{" "}
+                <a
+                  href="/terminos"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--accent)] hover:underline"
+                >
+                  Términos y Condiciones
+                </a>{" "}
+                y la{" "}
+                <a
+                  href="/privacidad"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--accent)] hover:underline"
+                >
+                  Política de Privacidad
+                </a>
+                .
+              </span>
+            </label>
             {accountError && (
               <p className="border-l-[3px] border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] text-[var(--danger)]">
                 {accountError}
