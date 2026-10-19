@@ -22,7 +22,14 @@
 
 # misc
 .DS_Store
+Thumbs.db
+desktop.ini
 *.pem
+
+# Claude Code — worktrees/session-local state, not shared project config
+# (.claude/launch.json stays tracked, it's the shared dev-server config)
+.claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # debug
 npm-debug.log*
