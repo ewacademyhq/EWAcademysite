@@ -6,6 +6,15 @@ import type { ModuleRow } from "@/lib/data/mycourse";
 import { createClient } from "@/lib/supabase/client";
 import { BackLink } from "@/components/ui/BackLink";
 import { Toast } from "@/components/ui/Toast";
+import { dmyToISO, todayISO } from "@/lib/date";
+
+/** Autogestionado no tiene fecha de arranque — la carpeta se ve siempre. En cohorte, recién cuando llega (o pasó) la fecha de inicio. */
+function cohorteArranco(course: Course): boolean {
+  if (course.modalidad !== "cohorte") return true;
+  const iso = dmyToISO(course.fecha);
+  if (!iso) return false;
+  return iso <= todayISO();
+}
 
 const DOCENTE_BIO: Record<string, string> = {
   "Nicolás Rivas": "Red Team @ fintech",
@@ -94,7 +103,7 @@ export function CursoClient({
             {course.titulo.split(/\s*[—:]\s*/).pop()}
           </h1>
         </div>
-        {course.driveFolderUrl ? (
+        {course.driveFolderUrl && cohorteArranco(course) ? (
           <a
             href={course.driveFolderUrl}
             target="_blank"
@@ -103,6 +112,10 @@ export function CursoClient({
           >
             Carpeta de Drive del curso ↗
           </a>
+        ) : course.driveFolderUrl ? (
+          <span className="mt-2 text-[13px] text-[var(--faint)]">
+            La carpeta se habilita cuando arranca el cohorte ({course.fecha})
+          </span>
         ) : (
           <span className="mt-2 text-[13px] text-[var(--faint)]">
             Todavía no hay una carpeta de Drive vinculada

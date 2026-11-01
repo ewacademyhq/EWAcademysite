@@ -35,6 +35,7 @@ export interface CourseDraft {
   vendidos: number;
   vistas: number;
   imagenUrl: string;
+  driveFolderUrl: string;
 }
 
 function draftFor(course: Course | null, courses: Course[], verticales: VerticalOption[]): CourseDraft {
@@ -64,6 +65,7 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
       vendidos: 0,
       vistas: 0,
       imagenUrl: "",
+      driveFolderUrl: "",
     };
   }
   return {
@@ -90,6 +92,7 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
     vendidos: course.vendidos,
     vistas: course.vistas,
     imagenUrl: course.imagenUrl ?? "",
+    driveFolderUrl: course.driveFolderUrl ?? "",
   };
 }
 
@@ -107,6 +110,7 @@ export function CourseEditorDrawer({
   onAssign,
   onCreateVertical,
   onMarkUpdated,
+  onCreateDriveFolder,
   onRemoveStudent,
   onAddModule,
   onRenameModule,
@@ -125,6 +129,7 @@ export function CourseEditorDrawer({
   onAssign: (person: PersonOption, motivo: string) => void;
   onCreateVertical: (nombre: string, prefijo: string) => Promise<boolean>;
   onMarkUpdated: (code: string) => void;
+  onCreateDriveFolder: (code: string) => Promise<string | null>;
   onRemoveStudent: (enrollmentId: number) => void;
   onAddModule: (titulo: string) => void;
   onRenameModule: (id: number, titulo: string) => void;
@@ -144,6 +149,7 @@ export function CourseEditorDrawer({
   const [nuevaVerticalNombre, setNuevaVerticalNombre] = useState("");
   const [nuevaVerticalPrefijo, setNuevaVerticalPrefijo] = useState("");
   const [guardandoVertical, setGuardandoVertical] = useState(false);
+  const [creandoCarpeta, setCreandoCarpeta] = useState(false);
 
   if (!mode) return null;
 
@@ -236,8 +242,17 @@ export function CourseEditorDrawer({
       vendidos: draft.vendidos,
       vistas: draft.vistas,
       imagenUrl: draft.imagenUrl || null,
+      driveFolderUrl: draft.driveFolderUrl.trim() || null,
     };
     onSave(course, draft.origCode);
+  }
+
+  async function crearCarpeta() {
+    if (!draft.origCode) return;
+    setCreandoCarpeta(true);
+    const url = await onCreateDriveFolder(draft.origCode);
+    setCreandoCarpeta(false);
+    if (url) patch("driveFolderUrl", url);
   }
 
   function usarSugerido() {
@@ -680,6 +695,33 @@ export function CourseEditorDrawer({
             {avisoZoom && (
               <p className="mt-1.5 text-[11.5px] text-[var(--accent)]">{avisoZoom}</p>
             )}
+          </div>
+
+          <div>
+            <label className={labelClass}>Carpeta de Drive</label>
+            <div className="mt-2 flex gap-2">
+              <input
+                className={`${inputClass} flex-1`}
+                placeholder="https://drive.google.com/drive/folders/... (se crea sola si se deja vacío)"
+                value={draft.driveFolderUrl}
+                onChange={(e) => patch("driveFolderUrl", e.target.value)}
+              />
+              {draft.origCode && !draft.driveFolderUrl && (
+                <button
+                  type="button"
+                  onClick={crearCarpeta}
+                  disabled={creandoCarpeta}
+                  className="h-11 shrink-0 border border-[var(--line2)] px-4 text-[12px] font-medium uppercase tracking-[.06em] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {creandoCarpeta ? "Creando…" : "Crear carpeta automáticamente"}
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+              {draft.origCode
+                ? "Opcional. Si la dejás vacía podés crearla con el botón — queda compartida con el docente y los admins como editores, y con link de solo lectura para los alumnos."
+                : "Opcional. Si la dejás vacía, al guardar se crea sola y se comparte con el docente y los admins."}
+            </p>
           </div>
 
           <div>

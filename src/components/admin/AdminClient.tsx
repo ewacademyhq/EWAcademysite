@@ -46,6 +46,7 @@ function courseToRow(c: Course) {
     imagen_url: c.imagenUrl ?? null,
     cupo_maximo: c.cupoMaximo ?? null,
     cupo_minimo: c.modalidad === "cohorte" ? c.cupoMinimo ?? null : null,
+    drive_folder_url: c.driveFolderUrl ?? null,
   };
 }
 
@@ -210,6 +211,34 @@ export function AdminClient({
     setEditingCourse(null);
   }
 
+  async function crearCarpetaDrive(code: string): Promise<string | null> {
+    try {
+      const res = await fetch("/api/drive/folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseCode: code }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        flash(data?.error ?? "No se pudo crear la carpeta de Drive");
+        return null;
+      }
+      return data.url as string;
+    } catch {
+      flash("No se pudo crear la carpeta de Drive");
+      return null;
+    }
+  }
+
+  async function crearCarpetaDriveManual(code: string): Promise<string | null> {
+    const url = await crearCarpetaDrive(code);
+    if (url) {
+      setCourses((cs) => cs.map((c) => (c.code === code ? { ...c, driveFolderUrl: url } : c)));
+      flash("Carpeta de Drive creada");
+    }
+    return url;
+  }
+
   async function saveCourse(course: Course, origCode: string | null) {
     const supabase = createClient();
     const row = courseToRow(course);
@@ -220,7 +249,12 @@ export function AdminClient({
         flash(`No se pudo crear el curso: ${error.message}`);
         return;
       }
-      setCourses((cs) => cs.concat(course));
+      let created = course;
+      if (!course.driveFolderUrl) {
+        const url = await crearCarpetaDrive(course.code);
+        if (url) created = { ...course, driveFolderUrl: url };
+      }
+      setCourses((cs) => cs.concat(created));
       flash("Curso creado");
     } else {
       const { error } = await supabase.from("courses").update(row).eq("code", origCode);
@@ -708,6 +742,7 @@ export function AdminClient({
         onAssign={assignStudent}
         onCreateVertical={crearVertical}
         onMarkUpdated={marcarContenidoActualizado}
+        onCreateDriveFolder={crearCarpetaDriveManual}
         onRemoveStudent={removeStudent}
         onAddModule={addModule}
         onRenameModule={renameModule}
