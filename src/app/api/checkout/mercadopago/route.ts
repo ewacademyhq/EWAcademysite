@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCourseByCode } from "@/lib/data/courses";
+import { cupoDisponible } from "@/lib/data/cupo";
 import { createPreference, isMercadoPagoConfigured } from "@/lib/mercadopago";
 import { isCourseStale } from "@/lib/business";
 import { todayISO } from "@/lib/date";
@@ -53,6 +54,13 @@ export async function POST(request: NextRequest) {
       { error: "Este curso ya no está disponible para nuevas matrículas." },
       { status: 404 }
     );
+  }
+
+  if (!existing) {
+    const { lleno } = await cupoDisponible(course.code, course.cupoMaximo);
+    if (lleno) {
+      return NextResponse.json({ error: "Este curso ya completó su cupo de alumnos." }, { status: 409 });
+    }
   }
 
   let enrollmentId = existing?.id as number | undefined;

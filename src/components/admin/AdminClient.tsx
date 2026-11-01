@@ -44,6 +44,8 @@ function courseToRow(c: Course) {
     vendidos: c.vendidos,
     vistas: c.vistas,
     imagen_url: c.imagenUrl ?? null,
+    cupo_maximo: c.cupoMaximo ?? null,
+    cupo_minimo: c.modalidad === "cohorte" ? c.cupoMinimo ?? null : null,
   };
 }
 
@@ -493,6 +495,57 @@ export function AdminClient({
     flash("Curso marcado como actualizado");
   }
 
+  /**
+   * Mueve las matrículas sin progreso del curso origen al destino (consolidar
+   * dos comisiones que no llegaron al mínimo). Solo se mueven las que tienen
+   * 0% — si alguien ya arrancó a cursar en el origen, se queda ahí. Si el
+   * origen queda en 0 alumnos después del movimiento, se marca
+   * `pendiente_borrado` para que aparezca el aviso en Cursos.
+   */
+  async function unificarCurso(origenCode: string, destinoCode: string): Promise<boolean> {
+    const destino = courses.find((c) => c.code === destinoCode);
+    if (!destino) {
+      flash("No se encontró el curso destino");
+      return false;
+    }
+
+    const candidatos = enroll.filter((e) => e.code === origenCode && parseInt(e.prog, 10) === 0);
+    if (candidatos.length === 0) {
+      flash("No hay alumnos sin progreso para mover en ese curso");
+      return false;
+    }
+
+    const inscriptosDestino = enroll.filter((e) => e.code === destinoCode).length;
+    if (destino.cupoMaximo && inscriptosDestino + candidatos.length > destino.cupoMaximo) {
+      flash(
+        `Mover ${candidatos.length} alumnos superaría el cupo máximo de ${destino.code} (${destino.cupoMaximo})`
+      );
+      return false;
+    }
+
+    const supabase = createClient();
+    const ids = candidatos.map((e) => e.id);
+    const { error } = await supabase.from("enrollments").update({ course_code: destinoCode }).in("id", ids);
+    if (error) {
+      flash(`No se pudo reasignar a los alumnos: ${error.message}`);
+      return false;
+    }
+
+    const quedanEnOrigen = enroll.filter((e) => e.code === origenCode).length - candidatos.length;
+    if (quedanEnOrigen === 0) {
+      const { error: flagError } = await supabase
+        .from("courses")
+        .update({ pendiente_borrado: true })
+        .eq("code", origenCode);
+      if (flagError) flash(`Se reasignó, pero no se pudo marcar ${origenCode}: ${flagError.message}`);
+      setCourses((cs) => cs.map((c) => (c.code === origenCode ? { ...c, pendienteBorrado: true } : c)));
+    }
+
+    setEnroll((es) => es.map((e) => (ids.includes(e.id) ? { ...e, code: destinoCode } : e)));
+    flash(`${candidatos.length} alumnos reasignados de ${origenCode} a ${destinoCode}`);
+    return true;
+  }
+
   async function updatePrice(id: number) {
     const e = enroll.find((x) => x.id === id);
     if (!e) return;
@@ -613,7 +666,13 @@ export function AdminClient({
         />
       )}
       {tab === "cursos" && (
-        <CursosTab courses={courses} enroll={enroll} onEdit={openEditCourse} onDelete={requestDelete} />
+        <CursosTab
+          courses={courses}
+          enroll={enroll}
+          onEdit={openEditCourse}
+          onDelete={requestDelete}
+          onUnificar={unificarCurso}
+        />
       )}
       {tab === "matriculas" && (
         <MatriculasTab

@@ -64,12 +64,15 @@ export function DocenteClient({
   const [nuevaTitulo, setNuevaTitulo] = useState("");
   const [nuevaFecha, setNuevaFecha] = useState("");
   const [nuevaMeetUrl, setNuevaMeetUrl] = useState("");
+  const [creandoSesion, setCreandoSesion] = useState(false);
   const [driveInput, setDriveInput] = useState("");
   const [editingDrive, setEditingDrive] = useState(false);
   const [editingSesionId, setEditingSesionId] = useState<number | null>(null);
   const [editTitulo, setEditTitulo] = useState("");
   const [editFecha, setEditFecha] = useState("");
   const [editMeetUrl, setEditMeetUrl] = useState("");
+  const [editMeetUrlOriginal, setEditMeetUrlOriginal] = useState("");
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [facturasState, setFacturasState] = useState(facturas);
   const [facturaFile, setFacturaFile] = useState<File | null>(null);
   const [subiendoFactura, setSubiendoFactura] = useState(false);
@@ -122,20 +125,23 @@ export function DocenteClient({
       flash("La fecha de la clase tiene que ser futura");
       return;
     }
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("course_sessions")
-      .insert({
-        course_code: code,
+    const esManual = Boolean(nuevaMeetUrl.trim());
+    setCreandoSesion(true);
+    const res = await fetch("/api/zoom/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseCode: code,
         titulo: nuevaTitulo.trim(),
         fecha: new Date(nuevaFecha).toISOString(),
-        meet_url: nuevaMeetUrl.trim(),
-      })
-      .select("id, course_code, titulo, fecha, meet_url")
-      .single();
+        meetUrl: nuevaMeetUrl.trim(),
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setCreandoSesion(false);
 
-    if (error || !data) {
-      flash(`No se pudo agendar la clase: ${error?.message ?? "error desconocido"}`);
+    if (!res.ok || !data) {
+      flash(`No se pudo agendar la clase: ${data?.error ?? "error desconocido"}`);
       return;
     }
 
@@ -149,14 +155,15 @@ export function DocenteClient({
     setNuevaFecha("");
     setNuevaMeetUrl("");
     setShowForm(false);
-    flash("Clase agendada");
+    const base = esManual ? "Clase agendada con tu link" : "Clase agendada — reunión de Zoom creada";
+    flash(data.warning ? `${base}. ${data.warning}` : base);
   }
 
   async function cancelarSesion(id: number) {
-    const supabase = createClient();
-    const { error } = await supabase.from("course_sessions").delete().eq("id", id);
-    if (error) {
-      flash(`No se pudo cancelar la clase: ${error.message}`);
+    const res = await fetch(`/api/zoom/sessions/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      flash(`No se pudo cancelar la clase: ${data?.error ?? "error desconocido"}`);
       return;
     }
     setSessionsState((prev) => prev.filter((s) => s.id !== id));
@@ -168,6 +175,7 @@ export function DocenteClient({
     setEditTitulo(s.titulo);
     setEditFecha(toDatetimeLocalValue(s.fecha));
     setEditMeetUrl(s.meetUrl);
+    setEditMeetUrlOriginal(s.meetUrl);
   }
 
   async function reprogramarSesion(id: number) {
@@ -179,20 +187,24 @@ export function DocenteClient({
       flash("La fecha de la clase tiene que ser futura");
       return;
     }
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("course_sessions")
-      .update({
+    // Solo mandamos meetUrl si lo tocaron — si no, el servidor mueve la
+    // reunión real de Zoom en vez de pisar el link con el mismo valor.
+    const meetUrlCambiado = editMeetUrl.trim() !== editMeetUrlOriginal.trim();
+    setGuardandoEdicion(true);
+    const res = await fetch(`/api/zoom/sessions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         titulo: editTitulo.trim(),
         fecha: new Date(editFecha).toISOString(),
-        meet_url: editMeetUrl.trim(),
-      })
-      .eq("id", id)
-      .select("id, course_code, titulo, fecha, meet_url")
-      .single();
+        ...(meetUrlCambiado ? { meetUrl: editMeetUrl.trim() } : {}),
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setGuardandoEdicion(false);
 
-    if (error || !data) {
-      flash(`No se pudo reprogramar la clase: ${error?.message ?? "error desconocido"}`);
+    if (!res.ok || !data) {
+      flash(`No se pudo reprogramar la clase: ${data?.error ?? "error desconocido"}`);
       return;
     }
 
@@ -222,7 +234,8 @@ export function DocenteClient({
       body: JSON.stringify({ courseCode: data.course_code, titulo: data.titulo, fechaLabel }),
     }).catch(() => {});
 
-    flash("Clase reprogramada. Los alumnos van a ver la nueva fecha al entrar al curso.");
+    const base = "Clase reprogramada. Los alumnos van a ver la nueva fecha al entrar al curso.";
+    flash(data.warning ? `${base} ${data.warning}` : base);
   }
 
   async function guardarDrive() {
@@ -377,7 +390,7 @@ export function DocenteClient({
               />
             </label>
             <label className="flex flex-col gap-1 text-[12px] text-[var(--faint)]">
-              Link de la clase (opcional)
+              Link manual (opcional)
               <input
                 value={nuevaMeetUrl}
                 onChange={(e) => setNuevaMeetUrl(e.target.value)}
@@ -387,10 +400,14 @@ export function DocenteClient({
             </label>
             <button
               onClick={crearSesion}
-              className="h-10 bg-[var(--accent)] px-5 text-[12.5px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] hover:bg-[var(--accent-600)]"
+              disabled={creandoSesion}
+              className="h-10 bg-[var(--accent)] px-5 text-[12.5px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] hover:bg-[var(--accent-600)] disabled:opacity-60"
             >
-              Agendar
+              {creandoSesion ? "Agendando…" : "Agendar"}
             </button>
+            <p className="w-full text-[11.5px] text-[var(--faint)]">
+              Dejá el link vacío para que Zoom cree la reunión solo, o pegá tu propio link si preferís cargarlo a mano.
+            </p>
           </div>
         )}
       </div>
@@ -465,15 +482,16 @@ export function DocenteClient({
                     <input
                       value={editMeetUrl}
                       onChange={(e) => setEditMeetUrl(e.target.value)}
-                      placeholder="Link de la clase (opcional)"
+                      placeholder="Link de la clase"
                       className="h-9 border border-[var(--line2)] bg-[var(--surface)] px-2.5 text-[13px]"
                     />
                     <div className="flex gap-2">
                       <button
                         onClick={() => reprogramarSesion(a.id)}
-                        className="h-9 flex-1 bg-[var(--accent)] text-[12px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] hover:bg-[var(--accent-600)]"
+                        disabled={guardandoEdicion}
+                        className="h-9 flex-1 bg-[var(--accent)] text-[12px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] hover:bg-[var(--accent-600)] disabled:opacity-60"
                       >
-                        Guardar
+                        {guardandoEdicion ? "Guardando…" : "Guardar"}
                       </button>
                       <button
                         onClick={() => setEditingSesionId(null)}
@@ -506,6 +524,16 @@ export function DocenteClient({
                       <div className="mt-1 text-[12px] text-[var(--faint)]">
                         {hora} · {code}
                       </div>
+                      {a.meetUrl && (
+                        <a
+                          href={a.meetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-block text-[11.5px] text-[var(--accent)] hover:underline"
+                        >
+                          Link de Zoom
+                        </a>
+                      )}
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">

@@ -26,6 +26,12 @@ export interface Course {
   contenidoActualizadoAt?: string | null;
   /** Fecha de fin de cohorte, ISO yyyy-mm-dd — null en cursos autogestionados. */
   fechaFin?: string | null;
+  /** Cupo máximo de alumnos — opcional, null/undefined = sin límite. */
+  cupoMaximo?: number | null;
+  /** Mínimo de alumnos para arrancar la cursada — solo aplica a cohorte. */
+  cupoMinimo?: number | null;
+  /** Quedó en 0 alumnos por una unificación con otro curso — ver CursosTab. */
+  pendienteBorrado?: boolean;
   /** Link real a la carpeta de Drive del curso, lo fija el propio docente. */
   driveFolderUrl?: string | null;
   /** URL pública de la imagen del curso (bucket "cursos"), o null si no se cargó ninguna. */

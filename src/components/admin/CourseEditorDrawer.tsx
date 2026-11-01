@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import type { Course, Enrollment, Modalidad, PagoTipo, Vertical } from "@/lib/types";
 import { PRECIO_MIN, docentePagoOf, nextCode } from "@/lib/business";
 import { formatARS } from "@/lib/format";
-import { todayISO } from "@/lib/date";
+import { todayISO, isoToDMY, dmyToISO } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import type { PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
@@ -23,6 +23,8 @@ export interface CourseDraft {
   pagoTipo: PagoTipo;
   pagoValor: string;
   clasesTotales: string;
+  cupoMaximo: string;
+  cupoMinimo: string;
   contenidoActualizadoAt: string;
   bolsillo: string;
   margen: string;
@@ -50,6 +52,8 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
       pagoTipo: "pct",
       pagoValor: "35",
       clasesTotales: "",
+      cupoMaximo: "",
+      cupoMinimo: "",
       contenidoActualizadoAt: "",
       bolsillo: "28000",
       margen: "40",
@@ -74,6 +78,8 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
     pagoTipo: course.pagoTipo,
     pagoValor: String(course.pagoValor),
     clasesTotales: course.clasesTotales != null ? String(course.clasesTotales) : "",
+    cupoMaximo: course.cupoMaximo != null ? String(course.cupoMaximo) : "",
+    cupoMinimo: course.cupoMinimo != null ? String(course.cupoMinimo) : "",
     contenidoActualizadoAt: course.contenidoActualizadoAt ?? "",
     bolsillo: String(Math.round(docentePagoOf(course))),
     margen: "40",
@@ -166,6 +172,8 @@ export function CourseEditorDrawer({
   const pagoValor = Number(draft.pagoValor) || 0;
   const comision = Number(draft.comision) || 0;
   const clasesTotales = Number(draft.clasesTotales) || 0;
+  const cupoMaximo = Number(draft.cupoMaximo) || 0;
+  const cupoMinimo = Number(draft.cupoMinimo) || 0;
   const bolsillo = Number(draft.bolsillo) || 0;
   const margen = Number(draft.margen) || 0;
   const minFechaFin = (() => {
@@ -192,7 +200,17 @@ export function CourseEditorDrawer({
   if (draft.pagoTipo === "fijo" && (pagoValor < 1 || pagoValor >= precio)) errores.push("El monto fijo al docente tiene que ser mayor a 0 y menor al precio.");
   if (draft.modalidad === "cohorte" && clasesTotales <= 0) errores.push("Las clases totales son obligatorias para un curso de cohorte.");
   if (draft.fechaFin && draft.fechaFin <= todayISO()) errores.push("La fecha de fin de cohorte tiene que ser posterior a hoy.");
+  if (draft.cupoMaximo && cupoMaximo <= 0) errores.push("El cupo máximo tiene que ser mayor a 0.");
+  if (draft.modalidad === "cohorte" && draft.cupoMinimo && cupoMinimo <= 0) errores.push("El cupo mínimo tiene que ser mayor a 0.");
+  if (draft.modalidad === "cohorte" && draft.cupoMaximo && draft.cupoMinimo && cupoMinimo > cupoMaximo) {
+    errores.push("El cupo mínimo no puede ser mayor al cupo máximo.");
+  }
   if (neto <= 0) errores.push("Con estos valores el neto para la academia queda en cero o negativo.");
+
+  const avisoZoom =
+    draft.modalidad === "cohorte" && cupoMaximo > 100
+      ? "El plan Pro de Zoom permite hasta 100 participantes por reunión — con este cupo, una clase en vivo llena no entraría."
+      : null;
 
   function handleSave() {
     if (errores.length) return;
@@ -210,6 +228,8 @@ export function CourseEditorDrawer({
       pagoValor,
       clasesTotales: draft.modalidad === "cohorte" ? clasesTotales : null,
       fechaFin: draft.modalidad === "cohorte" ? draft.fechaFin || null : null,
+      cupoMaximo: draft.cupoMaximo ? cupoMaximo : null,
+      cupoMinimo: draft.modalidad === "cohorte" && draft.cupoMinimo ? cupoMinimo : null,
       desc: draft.desc,
       fecha: draft.fecha,
       duracion: draft.duracion,
@@ -547,14 +567,15 @@ export function CourseEditorDrawer({
           {draft.modalidad === "cohorte" && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass}>Cantidad total de clases</label>
+                <label className={labelClass}>Fecha de inicio</label>
                 <input
+                  type="date"
                   className={`${inputClass} mt-2`}
-                  value={draft.clasesTotales}
-                  onChange={(e) => patch("clasesTotales", e.target.value.replace(/[^0-9]/g, ""))}
+                  value={dmyToISO(draft.fecha) ?? ""}
+                  onChange={(e) => patch("fecha", e.target.value ? isoToDMY(e.target.value) : "A definir")}
                 />
                 <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
-                  Es el denominador fijo del pago al docente (clases dadas en el mes ÷ este número). No lo cambies una vez empezado el cursado salvo que haga falta corregirlo.
+                  Opcional. Si no se completa, el curso se muestra como &quot;A definir&quot;.
                 </p>
               </div>
               <div>
@@ -569,6 +590,28 @@ export function CourseEditorDrawer({
                 <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
                   Opcional. Si se completa, las matrículas de esta cohorte se
                   finalizan solas en esa fecha. Tiene que ser una fecha futura.
+                </p>
+              </div>
+              <div>
+                <label className={labelClass}>Cantidad total de clases</label>
+                <input
+                  className={`${inputClass} mt-2`}
+                  value={draft.clasesTotales}
+                  onChange={(e) => patch("clasesTotales", e.target.value.replace(/[^0-9]/g, ""))}
+                />
+                <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+                  Es el denominador fijo del pago al docente (clases dadas en el mes ÷ este número). No lo cambies una vez empezado el cursado salvo que haga falta corregirlo.
+                </p>
+              </div>
+              <div>
+                <label className={labelClass}>Mínimo para arrancar</label>
+                <input
+                  className={`${inputClass} mt-2`}
+                  value={draft.cupoMinimo}
+                  onChange={(e) => patch("cupoMinimo", e.target.value.replace(/[^0-9]/g, ""))}
+                />
+                <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+                  Opcional. Desde 14 días antes de la fecha de inicio, si no se llegó, aparece un aviso en Cursos — no bloquea ni cancela nada solo.
                 </p>
               </div>
             </div>
@@ -622,6 +665,21 @@ export function CourseEditorDrawer({
             <p className="mt-3 text-[12px] leading-[1.5] text-[var(--faint)]">
               {netoPct}% del precio queda para la academia, por cada alumno que paga una vez.
             </p>
+          </div>
+
+          <div>
+            <label className={labelClass}>Cupo máximo de alumnos</label>
+            <input
+              className={`${inputClass} mt-2 max-w-[220px]`}
+              value={draft.cupoMaximo}
+              onChange={(e) => patch("cupoMaximo", e.target.value.replace(/[^0-9]/g, ""))}
+            />
+            <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+              Opcional. Sin límite si se deja vacío — el checkout corta solas nuevas matrículas al llegar a este número.
+            </p>
+            {avisoZoom && (
+              <p className="mt-1.5 text-[11.5px] text-[var(--accent)]">{avisoZoom}</p>
+            )}
           </div>
 
           <div>

@@ -51,6 +51,9 @@ interface AdminCourseRow {
   vendidos: number;
   vistas: number;
   imagen_url: string | null;
+  cupo_maximo: number | null;
+  cupo_minimo: number | null;
+  pendiente_borrado: boolean;
   docente: { nombre: string } | { nombre: string }[] | null;
 }
 
@@ -81,11 +84,14 @@ function mapCourseRow(row: AdminCourseRow): Course {
     contenidoActualizadoAt: row.contenido_actualizado_at,
     fechaFin: row.modalidad === "cohorte" ? row.fecha_fin : null,
     imagenUrl: row.imagen_url,
+    cupoMaximo: row.cupo_maximo,
+    cupoMinimo: row.modalidad === "cohorte" ? row.cupo_minimo : null,
+    pendienteBorrado: row.pendiente_borrado,
   };
 }
 
 const ADMIN_COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, clases_totales, contenido_actualizado_at, vendidos, vistas, imagen_url, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, clases_totales, contenido_actualizado_at, vendidos, vistas, imagen_url, cupo_maximo, cupo_minimo, pendiente_borrado, docente:users!docente_id(nombre)";
 
 export async function getAdminCourses(): Promise<Course[]> {
   const supabase = await createClient();

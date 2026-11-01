@@ -63,6 +63,13 @@ export function CheckoutClient({
     if (disabled) return;
     setPayError(null);
 
+    const cupoRes = await fetch(`/api/checkout/cupo?code=${encodeURIComponent(course.code)}`);
+    const cupoData = await cupoRes.json().catch(() => null);
+    if (cupoData?.lleno) {
+      setPayError("Este curso ya completó su cupo de alumnos.");
+      return;
+    }
+
     let currentAccount = account;
 
     if (!currentAccount) {
