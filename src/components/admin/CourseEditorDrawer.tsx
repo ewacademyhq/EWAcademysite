@@ -58,7 +58,7 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
       contenidoActualizadoAt: "",
       bolsillo: "28000",
       margen: "40",
-      desc: "Descripción pendiente.",
+      desc: "",
       fecha: "A definir",
       fechaFin: "",
       duracion: "4 meses",
@@ -198,6 +198,7 @@ export function CourseEditorDrawer({
 
   const errores: string[] = [];
   if (draft.titulo.trim().length < 5) errores.push("El título necesita al menos 5 caracteres.");
+  if (draft.desc.trim().length < 20) errores.push("La descripción necesita al menos 20 caracteres.");
   if (!/^[A-Z]+-\d{3}$/.test(draft.code)) errores.push("El código va con formato VERTICAL-000, por ejemplo CIBER-101.");
   if (courses.some((c) => c.code === draft.code && c.code !== draft.origCode)) errores.push("Ese código ya lo usa otro curso.");
   if (precio < PRECIO_MIN) errores.push(`El precio no puede ser menor a ${formatARS(PRECIO_MIN)}.`);
@@ -295,6 +296,18 @@ export function CourseEditorDrawer({
               value={draft.titulo}
               onChange={(e) => patch("titulo", e.target.value)}
             />
+          </div>
+
+          <div>
+            <label className={labelClass}>Descripción</label>
+            <textarea
+              className={`${inputClass} mt-2 h-24 resize-none py-2.5`}
+              value={draft.desc}
+              onChange={(e) => patch("desc", e.target.value)}
+            />
+            <p className="mt-1.5 text-[11.5px] text-[var(--faint)]">
+              Se muestra en el catálogo público y en la ficha del curso.
+            </p>
           </div>
 
           <div>
@@ -466,6 +479,15 @@ export function CourseEditorDrawer({
                   Todavía no hay ningún usuario con rol docente.
                 </p>
               )}
+            </div>
+            <div>
+              <label className={labelClass}>Duración</label>
+              <input
+                className={`${inputClass} mt-2`}
+                placeholder="ej: 4 meses"
+                value={draft.duracion}
+                onChange={(e) => patch("duracion", e.target.value)}
+              />
             </div>
           </div>
 
