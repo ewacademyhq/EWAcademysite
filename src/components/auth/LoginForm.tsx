@@ -1,28 +1,41 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ROLE_HOME, type Rol } from "@/lib/role-home";
+import { HCaptcha, type HCaptchaHandle } from "@/components/auth/HCaptcha";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captchaRef = useRef<HCaptchaHandle>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!captchaToken) {
+      setError("Completá la verificación antes de ingresar.");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: { captchaToken },
     });
+
+    captchaRef.current?.reset();
+    setCaptchaToken("");
 
     if (signInError || !data.user) {
       setError("Email o contraseña incorrectos.");
@@ -78,6 +91,8 @@ export function LoginForm() {
           placeholder="••••••••"
         />
       </div>
+
+      <HCaptcha ref={captchaRef} onVerify={setCaptchaToken} />
 
       {error && (
         <p className="border-l-[3px] border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] text-[var(--danger)]">

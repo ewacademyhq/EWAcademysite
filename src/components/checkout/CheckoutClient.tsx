@@ -7,6 +7,7 @@ import type { CurrentUser } from "@/lib/auth";
 import { formatARS } from "@/lib/format";
 import { Toast } from "@/components/ui/Toast";
 import { createClient } from "@/lib/supabase/client";
+import { HCaptcha, type HCaptchaHandle } from "@/components/auth/HCaptcha";
 
 type PayMethod = "mp" | "manual";
 
@@ -43,6 +44,8 @@ export function CheckoutClient({
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captchaRef = useRef<HCaptchaHandle>(null);
 
   const [pay, setPay] = useState<PayMethod>("mp");
   const [file, setFile] = useState<File | null>(null);
@@ -91,6 +94,10 @@ export function CheckoutClient({
         setAccountError("Tenés que aceptar los Términos y Condiciones y la Política de Privacidad.");
         return;
       }
+      if (!captchaToken) {
+        setAccountError("Completá la verificación antes de crear tu cuenta.");
+        return;
+      }
 
       setCreatingAccount(true);
       setAccountError(null);
@@ -99,8 +106,14 @@ export function CheckoutClient({
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { nombre: nombre.trim(), fecha_nacimiento: fechaNacimiento } },
+        options: {
+          data: { nombre: nombre.trim(), fecha_nacimiento: fechaNacimiento },
+          captchaToken,
+        },
       });
+
+      captchaRef.current?.reset();
+      setCaptchaToken("");
 
       if (error || !data.user) {
         setCreatingAccount(false);
@@ -338,6 +351,7 @@ export function CheckoutClient({
               </a>{" "}
               antes de matricularte.
             </p>
+            <HCaptcha ref={captchaRef} onVerify={setCaptchaToken} />
             <label className="flex items-start gap-2.5 text-[13px] leading-[1.5] text-[var(--dim)]">
               <input
                 type="checkbox"
