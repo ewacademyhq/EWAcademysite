@@ -3,7 +3,7 @@ import { Reveal } from "@/components/ui/Reveal";
 const cells = [
   {
     title: "Cohorte",
-    body: "Fecha de inicio y fin fijas, cupo limitado, entregas con fecha. Las grabaciones de cada clase quedan publicadas a las 24 horas.",
+    body: "Fecha de inicio y fin fijas, cupo limitado, entregas con fecha. Las grabaciones de cada clase quedan publicadas en aproximadamente 24 horas.",
   },
   {
     title: "Autogestionado",
@@ -12,7 +12,6 @@ const cells = [
   {
     title: "Material",
     body: "Una carpeta por módulo con slides, datasets y labs. El acceso sigue el estado de tu matrícula.",
-    path: "/CIBER-101/modulo-03/labs",
   },
 ];
 
@@ -26,7 +25,7 @@ export function Modalidad() {
           </div>
           <h2
             className="mt-3 font-bold uppercase text-[var(--text)]"
-            style={{ fontFamily: "var(--font-humane)", fontSize: "76px", lineHeight: 0.85 }}
+            style={{ fontFamily: "var(--font-humane)", fontSize: "clamp(40px, 10vw, 76px)", lineHeight: 0.85 }}
           >
             Dos formas de cursar
           </h2>
@@ -44,11 +43,6 @@ export function Modalidad() {
               <p className="mt-3 text-[14.5px] leading-[1.6] text-[var(--dim)]">
                 {cell.body}
               </p>
-              {cell.path && (
-                <div className="mt-4 font-mono text-[13px] tracking-[.04em] text-[var(--faint)]">
-                  {cell.path}
-                </div>
-              )}
             </div>
           ))}
         </Reveal>

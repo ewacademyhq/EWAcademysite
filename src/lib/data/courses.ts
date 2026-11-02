@@ -116,6 +116,14 @@ function mapSessionRow(row: CourseSessionRow): CourseSession {
   return { id: row.id, courseCode: row.course_code, titulo: row.titulo, fecha: row.fecha, meetUrl: row.meet_url };
 }
 
+/** Nombres de todas las verticales (incluye las que todavía no tienen ningún curso cargado). */
+export async function getVerticales(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("verticales").select("nombre").order("nombre");
+  if (error) throw error;
+  return (data ?? []).map((v) => v.nombre as string);
+}
+
 /** La próxima sesión en vivo agendada de un curso, o null si no hay ninguna futura. */
 export async function getUpcomingSession(courseCode: string): Promise<CourseSession | null> {
   const supabase = await createClient();

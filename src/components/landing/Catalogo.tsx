@@ -5,17 +5,42 @@ import { formatARS } from "@/lib/format";
 import { Reveal } from "@/components/ui/Reveal";
 import type { Course } from "@/lib/types";
 
-export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
+function ProximamenteTile({ grande = false }: { grande?: boolean }) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center border border-dashed border-[var(--line2)] bg-[var(--surface)] text-center ${
+        grande ? "px-6 py-16" : "p-[26px]"
+      }`}
+    >
+      <div
+        className="font-bold uppercase text-[var(--accent)]"
+        style={{ fontFamily: "var(--font-humane)", fontSize: grande ? "40px" : "26px", lineHeight: 0.85 }}
+      >
+        Próximamente
+      </div>
+      <p className="mt-3 max-w-[32ch] text-[13.5px] leading-[1.6] text-[var(--dim)]">
+        {grande
+          ? "Estamos preparando los primeros cursos de esta vertical."
+          : "Sumamos cursos nuevos todo el tiempo."}
+      </p>
+    </div>
+  );
+}
+
+export function Catalogo({
+  courses: allCourses,
+  verticales,
+}: {
+  courses: Course[];
+  verticales: string[];
+}) {
   const [filter, setFilter] = useState<string>("Todas");
 
-  // Las verticales del filtro salen de los cursos que realmente existen, no
-  // de una lista fija — así una vertical nueva (Q8) aparece sola en cuanto
-  // tiene al menos un curso cargado, sin traer la tabla `verticales` a la
-  // landing pública.
-  const FILTERS = useMemo(
-    () => ["Todas", ...Array.from(new Set(allCourses.map((c) => c.vertical)))],
-    [allCourses]
-  );
+  // Las verticales del filtro salen de la tabla real, no de los cursos que
+  // ya tienen algo cargado — así una vertical nueva aparece como filtro
+  // (con su tile de "Próximamente") desde el día que se crea, aunque
+  // todavía no tenga ningún curso.
+  const FILTERS = useMemo(() => ["Todas", ...verticales], [verticales]);
 
   const courses = useMemo(
     () =>
@@ -34,7 +59,7 @@ export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
           </div>
           <h2
             className="mt-3 font-bold uppercase text-[var(--text)]"
-            style={{ fontFamily: "var(--font-humane)", fontSize: "76px", lineHeight: 0.85 }}
+            style={{ fontFamily: "var(--font-humane)", fontSize: "clamp(40px, 10vw, 76px)", lineHeight: 0.85 }}
           >
             Especializaciones
           </h2>
@@ -62,9 +87,7 @@ export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
           key={filter}
         >
           {courses.length === 0 ? (
-            <div className="bg-[var(--surface)] px-6 py-16 text-center text-[14px] text-[var(--dim)]">
-              Todavía no hay cursos cargados en esta vertical.
-            </div>
+            <ProximamenteTile grande />
           ) : (
           <div
             className="grid gap-px bg-[var(--line)]"
@@ -127,6 +150,7 @@ export function Catalogo({ courses: allCourses }: { courses: Course[] }) {
                 </div>
               </article>
             ))}
+            <ProximamenteTile />
           </div>
           )}
         </Reveal>

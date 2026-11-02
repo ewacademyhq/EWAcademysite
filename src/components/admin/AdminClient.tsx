@@ -16,6 +16,7 @@ import { MatriculasTab } from "@/components/admin/tabs/MatriculasTab";
 import { EconomiaTab } from "@/components/admin/tabs/EconomiaTab";
 import { DocentesTab } from "@/components/admin/tabs/DocentesTab";
 import { CourseEditorDrawer } from "@/components/admin/CourseEditorDrawer";
+import { VerticalesDrawer } from "@/components/admin/VerticalesDrawer";
 import { FichaDrawer } from "@/components/admin/FichaDrawer";
 import { DeleteDialog } from "@/components/admin/DeleteDialog";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
@@ -95,6 +96,7 @@ export function AdminClient({
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const [toast, setToast] = useState<{ msg: string; snap?: Snapshot } | null>(null);
   const [courseModules, setCourseModules] = useState<ModuleRow[]>([]);
+  const [verticalesDrawerOpen, setVerticalesDrawerOpen] = useState(false);
 
   function flash(msg: string, snap?: Snapshot) {
     setToast({ msg, snap });
@@ -630,6 +632,40 @@ export function AdminClient({
     return true;
   }
 
+  async function editarVertical(nombreActual: string, nombreNuevo: string, prefijoNuevo: string): Promise<boolean> {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("verticales")
+      .update({ nombre: nombreNuevo, prefijo: prefijoNuevo })
+      .eq("nombre", nombreActual);
+    if (error) {
+      flash(`No se pudo editar la vertical: ${error.message}`);
+      return false;
+    }
+    setVerticalesOptions((vs) =>
+      vs
+        .map((v) => (v.nombre === nombreActual ? { nombre: nombreNuevo, prefijo: prefijoNuevo } : v))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre))
+    );
+    if (nombreActual !== nombreNuevo) {
+      setCourses((cs) => cs.map((c) => (c.vertical === nombreActual ? { ...c, vertical: nombreNuevo } : c)));
+    }
+    flash(`Vertical actualizada`);
+    return true;
+  }
+
+  async function borrarVertical(nombre: string): Promise<boolean> {
+    const supabase = createClient();
+    const { error } = await supabase.from("verticales").delete().eq("nombre", nombre);
+    if (error) {
+      flash(`No se pudo borrar la vertical: ${error.message}`);
+      return false;
+    }
+    setVerticalesOptions((vs) => vs.filter((v) => v.nombre !== nombre));
+    flash(`Vertical "${nombre}" eliminada`);
+    return true;
+  }
+
   async function marcarFacturaPagada(docenteId: string, facturaId: number) {
     const supabase = createClient();
     const { error } = await supabase.from("facturas").update({ estado: "pagada" }).eq("id", facturaId);
@@ -685,7 +721,7 @@ export function AdminClient({
 
   return (
     <div>
-      <AdminHeader onNewCourse={openNewCourse} />
+      <AdminHeader onNewCourse={openNewCourse} onManageVerticales={() => setVerticalesDrawerOpen(true)} />
 
       {tab === "kpi" && <KpiTab courses={courses} enroll={enroll} />}
       {tab === "pagos" && (
@@ -758,6 +794,16 @@ export function AdminClient({
       />
 
       <DeleteDialog target={dialog} onCancel={() => setDialog(null)} onConfirm={confirmDelete} />
+
+      <VerticalesDrawer
+        open={verticalesDrawerOpen}
+        verticales={verticalesOptions}
+        courses={courses}
+        onClose={() => setVerticalesDrawerOpen(false)}
+        onCreate={crearVertical}
+        onEdit={editarVertical}
+        onDelete={borrarVertical}
+      />
 
       <ConfirmDialog
         open={confirmApproveAll}

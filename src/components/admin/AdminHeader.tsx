@@ -13,7 +13,13 @@ const TABS = [
   { key: "docentes", label: "Docentes", href: "/admin/docentes", title: "Docentes", subtitle: "Alta, baja y cursos asignados" },
 ] as const;
 
-export function AdminHeader({ onNewCourse }: { onNewCourse: () => void }) {
+export function AdminHeader({
+  onNewCourse,
+  onManageVerticales,
+}: {
+  onNewCourse: () => void;
+  onManageVerticales: () => void;
+}) {
   const pathname = usePathname();
   const active = TABS.find((t) => t.href === pathname) ?? TABS[0];
 
@@ -33,6 +39,12 @@ export function AdminHeader({ onNewCourse }: { onNewCourse: () => void }) {
         <div className="flex gap-3">
           <button className="inline-flex h-11 items-center border border-[var(--line2)] px-5 text-[13px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]">
             Exportar
+          </button>
+          <button
+            onClick={onManageVerticales}
+            className="inline-flex h-11 items-center border border-[var(--line2)] px-5 text-[13px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            Verticales
           </button>
           <button
             onClick={onNewCourse}

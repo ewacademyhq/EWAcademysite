@@ -1,13 +1,27 @@
 import { Reveal } from "@/components/ui/Reveal";
 import { btnPrimary, btnSecondary } from "@/components/ui/buttons";
 
-const stats = [
-  { value: "4", label: "verticales" },
-  { value: "48h", label: "en vivo por cohorte" },
-  { value: "1:12", label: "docente-alumnos" },
-];
+function joinConY(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
+}
 
-export function Hero() {
+export function Hero({
+  verticales,
+  proximoInicioLabel,
+}: {
+  verticales: string[];
+  proximoInicioLabel: string | null;
+}) {
+  const stats = [
+    { value: String(verticales.length), label: "verticales" },
+    { value: "48h", label: "en vivo por cohorte" },
+    { value: "1:12", label: "docente-alumnos" },
+  ];
+  const badge = proximoInicioLabel
+    ? `Cohortes abiertas · ${proximoInicioLabel}`
+    : "Elegí la fecha que te quede mejor";
+
   return (
     <section className="relative overflow-hidden border-b-2 border-[var(--line)] px-8 pt-[76px] pb-[72px]">
       <div
@@ -33,7 +47,7 @@ export function Hero() {
               style={{ transform: "skewX(-24deg)" }}
             />
             <span className="text-[12px] font-medium uppercase tracking-[.2em] text-[var(--accent)]">
-              Cohortes abiertas · Septiembre 2026
+              {badge}
             </span>
           </div>
 
@@ -50,9 +64,8 @@ export function Hero() {
           </h1>
 
           <p className="mt-8 max-w-[56ch] text-[18px] leading-[1.62] text-[var(--dim)]">
-            Cursos online y en vivo de Ciberseguridad, QA, Inteligencia
-            Artificial y Desarrollo de Videojuegos, dictados por profesionales
-            en actividad.
+            Cursos online y en vivo de {joinConY(verticales)}, dictados por
+            profesionales en actividad.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-3">

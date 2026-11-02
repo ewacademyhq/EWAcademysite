@@ -2,7 +2,7 @@ import { Reveal } from "@/components/ui/Reveal";
 
 const steps = [
   { kicker: "Paso 01", title: "Elegís medio de pago", body: "Mercado Pago o transferencia con comprobante." },
-  { kicker: "Paso 02", title: "Se acredita", body: "Al instante con Mercado Pago, o en hasta 24 h hábiles si mandás comprobante." },
+  { kicker: "Paso 02", title: "Se acredita", body: "Al instante con Mercado Pago, o en aproximadamente 24 h hábiles si mandás comprobante." },
   { kicker: "Paso 03", title: "Accedés al toque", body: "Un solo pago por el precio total del curso — sin cuotas ni vencimientos." },
 ];
 
@@ -19,7 +19,7 @@ export function Pagos() {
           </div>
           <h2
             className="mt-3 font-bold uppercase text-[var(--text)]"
-            style={{ fontFamily: "var(--font-humane)", fontSize: "76px", lineHeight: 0.85 }}
+            style={{ fontFamily: "var(--font-humane)", fontSize: "clamp(40px, 10vw, 76px)", lineHeight: 0.85 }}
           >
             Pago único
           </h2>

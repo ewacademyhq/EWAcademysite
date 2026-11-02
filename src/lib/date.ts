@@ -18,6 +18,18 @@ export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/** "2027-01-15" -> "Enero 2027". */
+export function mesAnioLabel(iso: string): string {
+  const [yyyy, mm] = iso.split("-");
+  const mes = MESES[Number(mm) - 1] ?? "";
+  return `${mes.charAt(0).toUpperCase()}${mes.slice(1)} ${yyyy}`;
+}
+
 /** Fecha (DD/MM/AAAA) en que se efectiviza una baja pedida, a los 30 días de `bajaSolicitadaAt`. */
 export function bajaEfectivaLabel(bajaSolicitadaAt: string): string {
   const d = new Date(bajaSolicitadaAt);
