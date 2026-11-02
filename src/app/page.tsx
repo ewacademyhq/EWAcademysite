@@ -6,6 +6,7 @@ import { Modalidad } from "@/components/landing/Modalidad";
 import { Pagos } from "@/components/landing/Pagos";
 import { ClosingPoster } from "@/components/landing/ClosingPoster";
 import { Footer } from "@/components/landing/Footer";
+import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
 import { getCourses, getVerticales } from "@/lib/data/courses";
 import { getCurrentUser } from "@/lib/auth";
 import { dmyToISO, mesAnioLabel, todayISO } from "@/lib/date";
@@ -38,6 +39,7 @@ export default async function Home() {
         <ClosingPoster />
       </main>
       <Footer />
+      <WhatsAppFloat />
     </>
   );
 }

@@ -48,6 +48,8 @@ export interface Course {
   estado: EstadoCurso;
   /** Motivo que escribió el admin al rechazar la propuesta — null si nunca se rechazó. */
   motivoRechazo?: string | null;
+  /** Bio corta que carga el propio docente ("Red Team @ fintech") — null si nunca la cargó. */
+  docenteBio?: string | null;
 }
 
 export interface CourseSession {

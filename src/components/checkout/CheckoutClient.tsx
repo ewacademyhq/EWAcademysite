@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Course } from "@/lib/types";
 import type { CurrentUser } from "@/lib/auth";
+import type { ModuleRow } from "@/lib/data/mycourse";
 import { formatARS } from "@/lib/format";
 import { Toast } from "@/components/ui/Toast";
 import { createClient } from "@/lib/supabase/client";
@@ -29,9 +30,11 @@ function calcularEdad(fechaISO: string): number {
 export function CheckoutClient({
   course,
   user,
+  modules,
 }: {
   course: Course;
   user: CurrentUser | null;
+  modules: ModuleRow[];
 }) {
   const router = useRouter();
   const [account, setAccount] = useState<{ id: string; nombre: string; email: string } | null>(
@@ -290,6 +293,29 @@ export function CheckoutClient({
         <p className="mt-3 text-[13.5px] uppercase tracking-[.06em] text-[var(--dim)]">
           {course.vertical} · {modalidadLabel} · {fechaLabel}
         </p>
+
+        <p className="mt-5 max-w-[60ch] text-[14.5px] leading-[1.6] text-[var(--dim)]">
+          {course.desc}
+        </p>
+
+        {modules.length > 0 && (
+          <div className="mt-6">
+            <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
+              Qué vas a ver
+            </div>
+            <div className="mt-3 flex flex-col gap-px bg-[var(--line)]">
+              {modules.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 bg-[var(--surface)] px-4 py-3 text-[13.5px]"
+                >
+                  <span className="shrink-0 text-[var(--faint)]">#{m.numero}</span>
+                  <span>{m.titulo}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-10 text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
           Tu cuenta

@@ -4,6 +4,7 @@ import { getCourseByCode, registerCourseView } from "@/lib/data/courses";
 import { getCurrentUser } from "@/lib/auth";
 import { isCourseStale } from "@/lib/business";
 import { createClient } from "@/lib/supabase/server";
+import { getCourseModules } from "@/lib/data/mycourse";
 import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
 import { CheckoutClient } from "@/components/checkout/CheckoutClient";
 
@@ -55,10 +56,12 @@ export default async function CheckoutPage({
   // y "cursos más consultados" de KPIs — no bloquea el render si falla.
   void registerCourseView(course.code);
 
+  const modules = await getCourseModules(course.code);
+
   return (
     <>
       <CheckoutHeader backHref={user ? "/panel" : "/"} />
-      <CheckoutClient course={course} user={user} />
+      <CheckoutClient course={course} user={user} modules={modules} />
     </>
   );
 }

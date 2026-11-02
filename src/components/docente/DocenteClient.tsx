@@ -39,9 +39,69 @@ function periodoLabel(periodo: string) {
   return `${MESES[Number(mm) - 1]} ${yyyy}`;
 }
 
+function BioEditor({ bio }: { bio: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(bio ?? "");
+  const [current, setCurrent] = useState(bio);
+  const [guardando, setGuardando] = useState(false);
+
+  async function guardar() {
+    setGuardando(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("set_my_bio", { p_bio: value });
+    setGuardando(false);
+    if (!error) {
+      setCurrent(value.trim() || null);
+      setEditing(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-3 flex max-w-[480px] flex-wrap items-center gap-2">
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Ej: Red Team @ fintech"
+          className="h-9 min-w-0 flex-1 border border-[var(--line2)] bg-[var(--surface)] px-3 text-[13px]"
+        />
+        <button
+          onClick={guardar}
+          disabled={guardando}
+          className="h-9 bg-[var(--accent)] px-4 text-[12px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {guardando ? "Guardando…" : "Guardar"}
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          className="h-9 px-2 text-[12px] text-[var(--faint)] hover:text-[var(--text)]"
+        >
+          Cancelar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <p className="mt-2 text-[13px] text-[var(--dim)]">
+      {current ?? "Sin bio cargada — se muestra en la ficha de tus cursos."}{" "}
+      <button
+        onClick={() => {
+          setValue(current ?? "");
+          setEditing(true);
+        }}
+        className="text-[var(--accent)] hover:underline"
+      >
+        {current ? "Editar" : "Agregar bio"}
+      </button>
+    </p>
+  );
+}
+
 export function DocenteClient({
   docente,
   docenteId,
+  docenteBio,
   courses,
   enrollments,
   queue,
@@ -52,6 +112,7 @@ export function DocenteClient({
 }: {
   docente: string;
   docenteId: string;
+  docenteBio: string | null;
   courses: Course[];
   enrollments: Enrollment[];
   queue: Receipt[];
@@ -110,6 +171,7 @@ export function DocenteClient({
             Todavía no tenés cursos publicados
           </h1>
           <p className="mt-2 text-[13.5px] text-[var(--dim)]">{docente}</p>
+          <BioEditor bio={docenteBio} />
         </div>
         <div className="px-[34px] py-10">
           <p className="max-w-[52ch] text-[14.5px] leading-[1.6] text-[var(--dim)]">
@@ -348,6 +410,7 @@ export function DocenteClient({
               {cursosDictando.length === 1 ? "curso a cargo" : "cursos a cargo"} ·{" "}
               {totalAlumnos} alumnos
             </p>
+            <BioEditor bio={docenteBio} />
           </div>
           <button
             onClick={() => setShowForm((v) => !v)}

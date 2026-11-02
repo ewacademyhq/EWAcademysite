@@ -34,6 +34,7 @@ export default async function DocentePage() {
       <DocenteClient
         docente={user.nombre}
         docenteId={user.id}
+        docenteBio={user.bio}
         courses={courses}
         enrollments={enrollments}
         queue={queue}

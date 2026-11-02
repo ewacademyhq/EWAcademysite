@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BackLink } from "@/components/ui/BackLink";
 import { Toast } from "@/components/ui/Toast";
 import { dmyToISO, todayISO } from "@/lib/date";
+import { SUPPORT_WHATSAPP_URL } from "@/lib/contact";
 
 /** Autogestionado no tiene fecha de arranque — la carpeta se ve siempre. En cohorte, recién cuando llega (o pasó) la fecha de inicio. */
 function cohorteArranco(course: Course): boolean {
@@ -229,9 +230,19 @@ export function CursoClient({
               </span>
               <div>
                 <div className="text-[14px] font-medium">{course.docente}</div>
-                <div className="text-[12.5px] text-[var(--faint)]">Docente del curso</div>
+                <div className="text-[12.5px] text-[var(--faint)]">
+                  {course.docenteBio ?? "Docente del curso"}
+                </div>
               </div>
             </div>
+            <a
+              href={SUPPORT_WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex h-10 w-full items-center justify-center border border-[var(--line2)] text-[12px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              Consultar por WhatsApp
+            </a>
           </div>
         </div>
       </div>

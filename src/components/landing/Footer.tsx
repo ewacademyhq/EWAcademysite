@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SUPPORT_WHATSAPP_URL } from "@/lib/contact";
 
 export function Footer() {
   return (
@@ -6,6 +7,9 @@ export function Footer() {
       <span>EW Academy · EW Gaming Club · Resistencia, Chaco</span>
       <span>Precios en ARS · IVA incluido</span>
       <nav className="flex gap-4">
+        <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--text)]">
+          WhatsApp
+        </a>
         <Link href="/privacidad" className="hover:text-[var(--text)]">
           Privacidad
         </Link>
