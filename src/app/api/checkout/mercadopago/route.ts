@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
       .eq("id", enrollmentId);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await admin.rpc("increment_course_vendidos", { p_code: courseCode });
     return NextResponse.json({ mode: "simulated" });
   }
 

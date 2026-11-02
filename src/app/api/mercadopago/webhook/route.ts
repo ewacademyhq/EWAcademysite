@@ -15,10 +15,20 @@ async function handlePaymentId(paymentId: string | null) {
     const enrollmentId = Number(payment.external_reference);
     const supabase = createAdminClient();
 
+    const { data: enrollment } = await supabase
+      .from("enrollments")
+      .select("course_code")
+      .eq("id", enrollmentId)
+      .maybeSingle();
+
     await supabase
       .from("enrollments")
       .update({ estado: "activa", ultimo_pago_at: todayISO() })
       .eq("id", enrollmentId);
+
+    if (enrollment) {
+      await supabase.rpc("increment_course_vendidos", { p_code: enrollment.course_code });
+    }
 
     await supabase.from("payments").insert({
       enrollment_id: enrollmentId,

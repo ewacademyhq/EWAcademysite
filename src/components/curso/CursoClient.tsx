@@ -16,21 +16,6 @@ function cohorteArranco(course: Course): boolean {
   return iso <= todayISO();
 }
 
-const DOCENTE_BIO: Record<string, string> = {
-  "Nicolás Rivas": "Red Team @ fintech",
-  "Micaela Duarte": "QA Lead @ scale-up de logística",
-  "Federico Ojeda": "ML Engineer @ startup de IA",
-  "Bruno Salgado": "Game Developer independiente",
-};
-
-// Sin un sistema de clases grabadas todavía (Fase 7), esta lista queda de
-// muestra — no viene de ninguna tabla real.
-const RECORDINGS = [
-  { titulo: "Clase 3: práctica guiada", meta: "22/08 · 1h 52m" },
-  { titulo: "Laboratorio del módulo 2", meta: "19/08 · 2h 04m" },
-  { titulo: "Repaso de fundamentos", meta: "15/08 · 1h 41m" },
-];
-
 export function CursoClient({
   course,
   enrollment,
@@ -232,25 +217,6 @@ export function CursoClient({
         <div className="flex flex-col gap-5 lg:sticky lg:top-6">
           <div className="border border-[var(--line)] bg-[var(--surface)] p-6">
             <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
-              Grabaciones recientes
-            </div>
-            <div className="mt-4 flex flex-col gap-4">
-              {RECORDINGS.map((r) => (
-                <div key={r.titulo} className="flex items-center gap-3">
-                  <span className="flex h-9 w-[54px] shrink-0 items-center justify-center bg-[var(--surface2)] text-[var(--faint)]">
-                    ▶
-                  </span>
-                  <div className="min-w-0">
-                    <div className="truncate text-[13.5px]">{r.titulo}</div>
-                    <div className="text-[12px] text-[var(--faint)]">{r.meta}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="border border-[var(--line)] bg-[var(--surface)] p-6">
-            <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
               Docente
             </div>
             <div className="mt-4 flex items-center gap-3">
@@ -263,17 +229,9 @@ export function CursoClient({
               </span>
               <div>
                 <div className="text-[14px] font-medium">{course.docente}</div>
-                <div className="text-[12.5px] text-[var(--faint)]">
-                  {DOCENTE_BIO[course.docente] ?? "Docente del curso"}
-                </div>
+                <div className="text-[12.5px] text-[var(--faint)]">Docente del curso</div>
               </div>
             </div>
-            <button
-              onClick={() => flash("Mensaje enviado al docente")}
-              className="mt-5 inline-flex h-10 w-full items-center justify-center border border-[var(--line2)] text-[12px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
-            >
-              Consultar por mensaje
-            </button>
           </div>
         </div>
       </div>

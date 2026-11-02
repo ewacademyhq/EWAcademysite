@@ -373,6 +373,7 @@ export function AdminClient({
       flash(`No se pudo activar la matrícula: ${e2.message}`);
       return;
     }
+    await supabase.rpc("increment_course_vendidos", { p_code: r.curso });
     await supabase.from("payments").insert({
       enrollment_id: r.enrollmentId,
       periodo: hoy,
@@ -433,6 +434,10 @@ export function AdminClient({
       flash(`No se pudo activar las matrículas: ${e2.message}`);
       return;
     }
+
+    await Promise.all(
+      queue.map((q) => supabase.rpc("increment_course_vendidos", { p_code: q.curso }))
+    );
 
     await supabase.from("payments").insert(
       queue.map((q) => ({
