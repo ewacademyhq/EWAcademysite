@@ -18,7 +18,7 @@ export const POOL = [
   "Paula Insfrán",
 ];
 
-export function nextCode(prefijo: string, courses: Course[]): string {
+export function nextCode(prefijo: string, courses: Pick<Course, "code">[]): string {
   const prefix = prefijo || "EW";
   const nums = courses
     .filter((c) => c.code.startsWith(prefix + "-"))

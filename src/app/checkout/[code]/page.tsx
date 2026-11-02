@@ -41,10 +41,12 @@ export default async function CheckoutPage({
 
   if (!course) notFound();
 
-  if (isCourseStale(course)) {
-    // Un autogestionado sin actualizar hace más de 6 meses deja de venderse
-    // — pero si el alumno ya tenía una matrícula en curso (ej. transferencia
-    // subida, esperando aprobación), no le cortamos el pago a mitad de camino.
+  if (course.estado !== "publicado" || isCourseStale(course)) {
+    // Un curso que todavía no está publicado (propuesta/aprobada/rechazada)
+    // o un autogestionado sin actualizar hace más de 6 meses deja de
+    // venderse — pero si el alumno ya tenía una matrícula en curso (ej.
+    // transferencia subida, esperando aprobación), no le cortamos el pago a
+    // mitad de camino.
     const yaMatriculado = user ? await hasExistingEnrollment(user.id, course.code) : false;
     if (!yaMatriculado) notFound();
   }

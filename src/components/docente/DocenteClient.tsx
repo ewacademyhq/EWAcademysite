@@ -10,6 +10,7 @@ import { BackLink } from "@/components/ui/BackLink";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Toast } from "@/components/ui/Toast";
+import { PropuestasDocente } from "@/components/docente/PropuestasDocente";
 
 function sessionParts(iso: string) {
   const d = new Date(iso);
@@ -47,6 +48,7 @@ export function DocenteClient({
   sessions,
   liquidacion,
   facturas,
+  verticales,
 }: {
   docente: string;
   docenteId: string;
@@ -56,10 +58,14 @@ export function DocenteClient({
   sessions: CourseSession[];
   liquidacion: Liquidacion;
   facturas: FacturaRow[];
+  verticales: string[];
 }) {
-  const [code, setCode] = useState(courses[0]?.code ?? "");
+  const [propuestasState, setPropuestasState] = useState(courses);
+  const cursosDictando = propuestasState.filter((c) => c.estado === "publicado");
+  const misPropuestas = propuestasState.filter((c) => c.estado !== "publicado");
+  const [code, setCode] = useState(cursosDictando[0]?.code ?? "");
   const [sessionsState, setSessionsState] = useState(sessions);
-  const [courseDrafts, setCourseDrafts] = useState(courses);
+  const [courseDrafts, setCourseDrafts] = useState(cursosDictando);
   const [showForm, setShowForm] = useState(false);
   const [nuevaTitulo, setNuevaTitulo] = useState("");
   const [nuevaFecha, setNuevaFecha] = useState("");
@@ -84,7 +90,15 @@ export function DocenteClient({
     window.setTimeout(() => setToast(null), 3200);
   }
 
-  if (courses.length === 0) {
+  function agregarPropuesta(course: Course) {
+    setPropuestasState((prev) => prev.concat(course));
+  }
+
+  function actualizarPropuesta(code: string, cambios: Partial<Course>) {
+    setPropuestasState((prev) => prev.map((c) => (c.code === code ? { ...c, ...cambios } : c)));
+  }
+
+  if (cursosDictando.length === 0) {
     return (
       <div>
         <div className="border-b-2 border-[var(--line)] px-[34px] py-[26px]">
@@ -93,24 +107,30 @@ export function DocenteClient({
             className="mt-5 font-bold uppercase text-[var(--text)]"
             style={{ fontFamily: "var(--font-humane)", fontSize: "56px", lineHeight: 0.84 }}
           >
-            Todavía no tenés cursos a cargo
+            Todavía no tenés cursos publicados
           </h1>
           <p className="mt-2 text-[13.5px] text-[var(--dim)]">{docente}</p>
         </div>
         <div className="px-[34px] py-10">
           <p className="max-w-[52ch] text-[14.5px] leading-[1.6] text-[var(--dim)]">
-            Cuando administración te asigne un curso como docente, tus
-            alumnos y comprobantes pendientes van a aparecer acá.
+            Cuando administración te asigne un curso o apruebe una propuesta
+            tuya, tus alumnos y comprobantes pendientes van a aparecer acá.
           </p>
         </div>
+        <PropuestasDocente
+          propuestas={misPropuestas}
+          verticales={verticales}
+          onNuevaPropuesta={agregarPropuesta}
+          onActualizarPropuesta={actualizarPropuesta}
+        />
       </div>
     );
   }
 
-  const asDropdown = courses.length > 5;
+  const asDropdown = cursosDictando.length > 5;
   const students = enrollments.filter((e) => e.code === code);
   const totalAlumnos = new Set(
-    enrollments.filter((e) => courses.some((c) => c.code === e.code)).map((e) => e.id)
+    enrollments.filter((e) => cursosDictando.some((c) => c.code === e.code)).map((e) => e.id)
   ).size;
   const pending = queue.filter((q) => q.curso === code);
   const agenda = sessionsState.filter((s) => s.courseCode === code);
@@ -324,8 +344,8 @@ export function DocenteClient({
               Panel docente
             </h1>
             <p className="mt-2 text-[13.5px] text-[var(--dim)]">
-              {docente} · {courses.length}{" "}
-              {courses.length === 1 ? "curso a cargo" : "cursos a cargo"} ·{" "}
+              {docente} · {cursosDictando.length}{" "}
+              {cursosDictando.length === 1 ? "curso a cargo" : "cursos a cargo"} ·{" "}
               {totalAlumnos} alumnos
             </p>
           </div>
@@ -344,7 +364,7 @@ export function DocenteClient({
               onChange={(e) => setCode(e.target.value)}
               className="h-10 border border-[var(--line2)] bg-[var(--surface)] px-3 text-[13px]"
             >
-              {courses.map((c) => (
+              {cursosDictando.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.code} · {c.titulo}
                 </option>
@@ -352,7 +372,7 @@ export function DocenteClient({
             </select>
           ) : (
             <div className="flex flex-wrap gap-6 border-b border-[var(--line)]">
-              {courses.map((c) => (
+              {cursosDictando.map((c) => (
                 <button
                   key={c.code}
                   onClick={() => setCode(c.code)}
@@ -748,6 +768,13 @@ export function DocenteClient({
           </div>
         </div>
       </div>
+
+      <PropuestasDocente
+        propuestas={misPropuestas}
+        verticales={verticales}
+        onNuevaPropuesta={agregarPropuesta}
+        onActualizarPropuesta={actualizarPropuesta}
+      />
 
       <Toast message={toast} />
     </div>

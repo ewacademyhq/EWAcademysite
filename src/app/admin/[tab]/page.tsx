@@ -13,7 +13,7 @@ import {
   getVerticales,
 } from "@/lib/data/admin";
 
-const VALID_TABS: AdminTab[] = ["kpi", "pagos", "cursos", "matriculas", "economia", "docentes"];
+const VALID_TABS: AdminTab[] = ["kpi", "pagos", "cursos", "propuestas", "matriculas", "economia", "docentes"];
 
 export const metadata: Metadata = { title: "Administración", robots: { index: false, follow: false } };
 

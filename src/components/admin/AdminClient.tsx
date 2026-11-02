@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AuditEntry, Course, Enrollment, EstadoMatricula, Receipt } from "@/lib/types";
+import type { AuditEntry, Course, Enrollment, EstadoMatricula, PagoTipo, Receipt } from "@/lib/types";
 import type { DocenteConCursos, PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
 import { ALLOWED_TRANSITIONS, ESTADOS } from "@/lib/business";
@@ -12,6 +12,7 @@ import { AdminHeader } from "@/components/admin/AdminHeader";
 import { KpiTab } from "@/components/admin/tabs/KpiTab";
 import { PagosTab } from "@/components/admin/tabs/PagosTab";
 import { CursosTab } from "@/components/admin/tabs/CursosTab";
+import { PropuestasTab } from "@/components/admin/tabs/PropuestasTab";
 import { MatriculasTab } from "@/components/admin/tabs/MatriculasTab";
 import { EconomiaTab } from "@/components/admin/tabs/EconomiaTab";
 import { DocentesTab } from "@/components/admin/tabs/DocentesTab";
@@ -22,7 +23,7 @@ import { DeleteDialog } from "@/components/admin/DeleteDialog";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Toast } from "@/components/ui/Toast";
 
-export type AdminTab = "kpi" | "pagos" | "cursos" | "matriculas" | "economia" | "docentes";
+export type AdminTab = "kpi" | "pagos" | "cursos" | "propuestas" | "matriculas" | "economia" | "docentes";
 
 type Snapshot = { queue: Receipt[]; enroll: Enrollment[] };
 
@@ -48,6 +49,7 @@ function courseToRow(c: Course) {
     cupo_maximo: c.cupoMaximo ?? null,
     cupo_minimo: c.modalidad === "cohorte" ? c.cupoMinimo ?? null : null,
     drive_folder_url: c.driveFolderUrl ?? null,
+    estado: c.estado,
   };
 }
 
@@ -531,6 +533,89 @@ export function AdminClient({
     flash("Curso marcado como actualizado");
   }
 
+  async function aprobarPropuesta(
+    code: string,
+    terminos: {
+      precio: number;
+      comision: number;
+      pagoTipo: PagoTipo;
+      pagoValor: number;
+      cupoMaximo: number | null;
+      cupoMinimo: number | null;
+      fechaInicioIso: string | null;
+      fechaFinIso: string | null;
+    }
+  ): Promise<boolean> {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("courses")
+      .update({
+        precio: terminos.precio,
+        comision: terminos.comision,
+        pago_tipo: terminos.pagoTipo,
+        pago_valor: terminos.pagoValor,
+        cupo_maximo: terminos.cupoMaximo,
+        cupo_minimo: terminos.cupoMinimo,
+        fecha_inicio: terminos.fechaInicioIso,
+        fecha_fin: terminos.fechaFinIso,
+        estado: "aprobada",
+      })
+      .eq("code", code);
+    if (error) {
+      flash(`No se pudo aprobar la propuesta: ${error.message}`);
+      return false;
+    }
+    setCourses((cs) =>
+      cs.map((c) =>
+        c.code === code
+          ? {
+              ...c,
+              precio: terminos.precio,
+              comision: terminos.comision,
+              pagoTipo: terminos.pagoTipo,
+              pagoValor: terminos.pagoValor,
+              cupoMaximo: terminos.cupoMaximo,
+              cupoMinimo: terminos.cupoMinimo,
+              fecha: terminos.fechaInicioIso ? isoToDMY(terminos.fechaInicioIso) : "A definir",
+              fechaFin: terminos.fechaFinIso,
+              estado: "aprobada",
+            }
+          : c
+      )
+    );
+    flash(`Propuesta de ${code} aprobada — el docente ya puede cargar el contenido`);
+    return true;
+  }
+
+  async function rechazarPropuesta(code: string, motivo: string): Promise<boolean> {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("courses")
+      .update({ estado: "rechazada", motivo_rechazo: motivo })
+      .eq("code", code);
+    if (error) {
+      flash(`No se pudo rechazar la propuesta: ${error.message}`);
+      return false;
+    }
+    setCourses((cs) =>
+      cs.map((c) => (c.code === code ? { ...c, estado: "rechazada", motivoRechazo: motivo } : c))
+    );
+    flash(`Propuesta de ${code} rechazada`);
+    return true;
+  }
+
+  async function publicarCurso(code: string): Promise<boolean> {
+    const supabase = createClient();
+    const { error } = await supabase.from("courses").update({ estado: "publicado" }).eq("code", code);
+    if (error) {
+      flash(`No se pudo publicar: ${error.message}`);
+      return false;
+    }
+    setCourses((cs) => cs.map((c) => (c.code === code ? { ...c, estado: "publicado" } : c)));
+    flash(`${code} publicado en el catálogo`);
+    return true;
+  }
+
   /**
    * Mueve las matrículas sin progreso del curso origen al destino (consolidar
    * dos comisiones que no llegaron al mínimo). Solo se mueven las que tienen
@@ -742,6 +827,14 @@ export function AdminClient({
           onEdit={openEditCourse}
           onDelete={requestDelete}
           onUnificar={unificarCurso}
+        />
+      )}
+      {tab === "propuestas" && (
+        <PropuestasTab
+          courses={courses}
+          onAprobar={aprobarPropuesta}
+          onRechazar={rechazarPropuesta}
+          onPublicar={publicarCurso}
         />
       )}
       {tab === "matriculas" && (

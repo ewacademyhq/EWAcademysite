@@ -5,6 +5,7 @@ import type {
   Course,
   CourseSession,
   Enrollment,
+  EstadoCurso,
   EstadoMatricula,
   Modalidad,
   PagoTipo,
@@ -27,6 +28,9 @@ interface DocenteCourseRow {
   vendidos: number;
   vistas: number;
   drive_folder_url: string | null;
+  clases_totales: number | null;
+  estado: EstadoCurso;
+  motivo_rechazo: string | null;
 }
 
 function mapCourseRow(row: DocenteCourseRow, docente: string): Course {
@@ -46,11 +50,14 @@ function mapCourseRow(row: DocenteCourseRow, docente: string): Course {
     vendidos: row.vendidos,
     vistas: row.vistas,
     driveFolderUrl: row.drive_folder_url,
+    clasesTotales: row.clases_totales,
+    estado: row.estado,
+    motivoRechazo: row.motivo_rechazo,
   };
 }
 
 const COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, vendidos, vistas, drive_folder_url";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, vendidos, vistas, drive_folder_url, clases_totales, estado, motivo_rechazo";
 
 /** Cursos a cargo del docente autenticado (RLS de courses ya es de lectura pública). */
 export async function getMyTeachingCourses(teacherId: string, teacherNombre: string): Promise<Course[]> {

@@ -10,6 +10,7 @@ import {
   getMyLiquidacion,
   getMyFacturas,
 } from "@/lib/data/docente";
+import { getVerticales } from "@/lib/data/courses";
 
 export const metadata: Metadata = { title: "Panel docente", robots: { index: false, follow: false } };
 
@@ -18,17 +19,18 @@ export default async function DocentePage() {
   if (!user) return null; // el proxy ya redirige a /login antes de esto
 
   const courses = await getMyTeachingCourses(user.id, user.nombre);
-  const codes = courses.map((c) => c.code);
-  const [enrollments, queue, sessions, liquidacion, facturas] = await Promise.all([
+  const codes = courses.filter((c) => c.estado === "publicado").map((c) => c.code);
+  const [enrollments, queue, sessions, liquidacion, facturas, verticales] = await Promise.all([
     getMyStudentEnrollments(codes),
     getMyReceiptQueue(codes),
     getMyUpcomingSessions(codes),
     getMyLiquidacion(user.id),
     getMyFacturas(user.id),
+    getVerticales(),
   ]);
 
   return (
-    <AppShell role="docente" defaultCourseCode={courses[0]?.code ?? ""}>
+    <AppShell role="docente" defaultCourseCode={courses.find((c) => c.estado === "publicado")?.code ?? ""}>
       <DocenteClient
         docente={user.nombre}
         docenteId={user.id}
@@ -38,6 +40,7 @@ export default async function DocentePage() {
         sessions={sessions}
         liquidacion={liquidacion}
         facturas={facturas}
+        verticales={verticales}
       />
     </AppShell>
   );

@@ -2,6 +2,14 @@
 export type Vertical = string;
 export type Modalidad = "cohorte" | "continuo";
 export type PagoTipo = "pct" | "fijo";
+/**
+ * Flujo de alta: 'propuesta' (el docente la mandó, falta que el admin apruebe
+ * la estructura) -> 'rechazada' (el docente puede editar y reenviar) ->
+ * 'aprobada' (el admin completó precio/cupo/fechas, el docente carga el
+ * contenido) -> 'publicada' (visible en el catálogo público). Un curso creado
+ * directo por el admin nace en 'publicada', se salta el resto.
+ */
+export type EstadoCurso = "propuesta" | "rechazada" | "aprobada" | "publicado";
 
 export interface Course {
   code: string;
@@ -36,6 +44,10 @@ export interface Course {
   driveFolderUrl?: string | null;
   /** URL pública de la imagen del curso (bucket "cursos"), o null si no se cargó ninguna. */
   imagenUrl?: string | null;
+  /** Ver EstadoCurso — default 'publicado' para cursos creados por el admin. */
+  estado: EstadoCurso;
+  /** Motivo que escribió el admin al rechazar la propuesta — null si nunca se rechazó. */
+  motivoRechazo?: string | null;
 }
 
 export interface CourseSession {

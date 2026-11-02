@@ -8,6 +8,7 @@ const TABS = [
   { key: "kpi", label: "KPIs", href: "/admin/kpi", title: "Tablero", subtitle: "Agosto 2026 · datos de muestra" },
   { key: "pagos", label: "Pagos", href: "/admin/pagos", title: "Pagos", subtitle: "Cola manual de comprobantes y matrículas activas" },
   { key: "cursos", label: "Cursos", href: "/admin/cursos", title: "Cursos", subtitle: "Alta, edición y baja de cursos" },
+  { key: "propuestas", label: "Propuestas", href: "/admin/propuestas", title: "Propuestas", subtitle: "Estructuras de curso que mandaron los docentes" },
   { key: "matriculas", label: "Matrículas", href: "/admin/matriculas", title: "Matrículas", subtitle: "Estado, cuotas y asignación" },
   { key: "economia", label: "Economía", href: "/admin/economia", title: "Economía", subtitle: "Reparto por curso y neto para la academia" },
   { key: "docentes", label: "Docentes", href: "/admin/docentes", title: "Docentes", subtitle: "Alta, baja y cursos asignados" },

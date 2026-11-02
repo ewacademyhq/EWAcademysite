@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { Course, Enrollment, Modalidad, PagoTipo, Vertical } from "@/lib/types";
+import type { Course, Enrollment, EstadoCurso, Modalidad, PagoTipo, Vertical } from "@/lib/types";
 import { PRECIO_MIN, docentePagoOf, nextCode } from "@/lib/business";
 import { formatARS } from "@/lib/format";
 import { todayISO, isoToDMY, dmyToISO } from "@/lib/date";
@@ -36,6 +36,7 @@ export interface CourseDraft {
   vistas: number;
   imagenUrl: string;
   driveFolderUrl: string;
+  estado: EstadoCurso;
 }
 
 function draftFor(course: Course | null, courses: Course[], verticales: VerticalOption[]): CourseDraft {
@@ -66,6 +67,7 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
       vistas: 0,
       imagenUrl: "",
       driveFolderUrl: "",
+      estado: "publicado",
     };
   }
   return {
@@ -93,6 +95,7 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
     vistas: course.vistas,
     imagenUrl: course.imagenUrl ?? "",
     driveFolderUrl: course.driveFolderUrl ?? "",
+    estado: course.estado,
   };
 }
 
@@ -244,6 +247,7 @@ export function CourseEditorDrawer({
       vistas: draft.vistas,
       imagenUrl: draft.imagenUrl || null,
       driveFolderUrl: draft.driveFolderUrl.trim() || null,
+      estado: draft.estado,
     };
     onSave(course, draft.origCode);
   }

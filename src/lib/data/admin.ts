@@ -3,6 +3,7 @@ import { isoToDMY, initials } from "@/lib/date";
 import type {
   Course,
   Enrollment,
+  EstadoCurso,
   EstadoMatricula,
   Modalidad,
   PagoTipo,
@@ -54,6 +55,8 @@ interface AdminCourseRow {
   cupo_maximo: number | null;
   cupo_minimo: number | null;
   pendiente_borrado: boolean;
+  estado: EstadoCurso;
+  motivo_rechazo: string | null;
   docente: { nombre: string } | { nombre: string }[] | null;
 }
 
@@ -87,11 +90,13 @@ function mapCourseRow(row: AdminCourseRow): Course {
     cupoMaximo: row.cupo_maximo,
     cupoMinimo: row.modalidad === "cohorte" ? row.cupo_minimo : null,
     pendienteBorrado: row.pendiente_borrado,
+    estado: row.estado,
+    motivoRechazo: row.motivo_rechazo,
   };
 }
 
 const ADMIN_COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, clases_totales, contenido_actualizado_at, vendidos, vistas, imagen_url, cupo_maximo, cupo_minimo, pendiente_borrado, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, clases_totales, contenido_actualizado_at, vendidos, vistas, imagen_url, cupo_maximo, cupo_minimo, pendiente_borrado, estado, motivo_rechazo, docente:users!docente_id(nombre)";
 
 export async function getAdminCourses(): Promise<Course[]> {
   const supabase = await createClient();

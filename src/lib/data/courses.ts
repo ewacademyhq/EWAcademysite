@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isCourseStale } from "@/lib/business";
-import type { Course, CourseSession, PagoTipo, Modalidad, Vertical } from "@/lib/types";
+import type { Course, CourseSession, EstadoCurso, PagoTipo, Modalidad, Vertical } from "@/lib/types";
 
 interface CourseRow {
   code: string;
@@ -20,6 +20,7 @@ interface CourseRow {
   drive_folder_url: string | null;
   imagen_url: string | null;
   cupo_maximo: number | null;
+  estado: EstadoCurso;
   docente: { nombre: string } | { nombre: string }[] | null;
 }
 
@@ -55,13 +56,14 @@ function mapRow(row: CourseRow): Course {
     driveFolderUrl: row.drive_folder_url,
     imagenUrl: row.imagen_url,
     cupoMaximo: row.cupo_maximo,
+    estado: row.estado,
   };
 }
 
 const COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, contenido_actualizado_at, vendidos, vistas, drive_folder_url, imagen_url, cupo_maximo, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, contenido_actualizado_at, vendidos, vistas, drive_folder_url, imagen_url, cupo_maximo, estado, docente:users!docente_id(nombre)";
 
-/** Catálogo público — excluye los autogestionados que quedaron sin actualizar hace más de 6 meses (siguen accesibles para quien ya se matriculó, ver getCourseByCode). */
+/** Catálogo público — excluye lo que no esté publicado, y los autogestionados que quedaron sin actualizar hace más de 6 meses (siguen accesibles para quien ya se matriculó, ver getCourseByCode). */
 export async function getCourses(): Promise<Course[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -70,7 +72,7 @@ export async function getCourses(): Promise<Course[]> {
     .order("code");
 
   if (error) throw error;
-  return (data as CourseRow[]).map(mapRow).filter((c) => !isCourseStale(c));
+  return (data as CourseRow[]).map(mapRow).filter((c) => c.estado === "publicado" && !isCourseStale(c));
 }
 
 export async function getCourseByCode(code: string): Promise<Course | null> {

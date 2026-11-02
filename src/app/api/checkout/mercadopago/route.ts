@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ mode: "already-active" });
   }
 
-  if (!existing && isCourseStale(course)) {
+  if (!existing && (course.estado !== "publicado" || isCourseStale(course))) {
     return NextResponse.json(
       { error: "Este curso ya no está disponible para nuevas matrículas." },
       { status: 404 }
