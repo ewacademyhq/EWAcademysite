@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AuditEntry, Course, Enrollment, EstadoMatricula, PagoTipo, Receipt } from "@/lib/types";
+import type { AuditEntry, Course, CourseSession, Enrollment, EstadoMatricula, PagoTipo, Receipt } from "@/lib/types";
 import type { DocenteConCursos, PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
 import { ALLOWED_TRANSITIONS, ESTADOS } from "@/lib/business";
@@ -98,6 +98,7 @@ export function AdminClient({
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const [toast, setToast] = useState<{ msg: string; snap?: Snapshot } | null>(null);
   const [courseModules, setCourseModules] = useState<ModuleRow[]>([]);
+  const [courseSessions, setCourseSessions] = useState<CourseSession[]>([]);
   const [verticalesDrawerOpen, setVerticalesDrawerOpen] = useState(false);
 
   function flash(msg: string, snap?: Snapshot) {
@@ -160,6 +161,103 @@ export function AdminClient({
       cancelled = true;
     };
   }, [editingCourse]);
+
+  // Trae las clases en vivo (Zoom) reales del curso que se está editando —
+  // el admin tiene que poder verlas y gestionarlas aunque el curso todavía
+  // esté en estado "propuesta", sin aprobar (la policy de `course_sessions`
+  // ya lo permite, ver 0011_fase7.sql).
+  useEffect(() => {
+    if (!editingCourse) return;
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("course_sessions")
+      .select("id, course_code, titulo, fecha, meet_url")
+      .eq("course_code", editingCourse.code)
+      .order("fecha")
+      .then(({ data }) => {
+        if (!cancelled) {
+          setCourseSessions(
+            (data ?? []).map((s) => ({
+              id: s.id,
+              courseCode: s.course_code,
+              titulo: s.titulo,
+              fecha: s.fecha,
+              meetUrl: s.meet_url,
+            }))
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editingCourse]);
+
+  async function addSesion(titulo: string, fecha: string, meetUrl: string) {
+    if (!editingCourse) return;
+    const res = await fetch("/api/zoom/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseCode: editingCourse.code, titulo, fecha, meetUrl }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data) {
+      flash(`No se pudo agendar la clase: ${data?.error ?? "error desconocido"}`);
+      return;
+    }
+    setCourseSessions((ss) =>
+      [...ss, { id: data.id, courseCode: data.course_code, titulo: data.titulo, fecha: data.fecha, meetUrl: data.meet_url }].sort(
+        (a, b) => a.fecha.localeCompare(b.fecha)
+      )
+    );
+    flash(data.warning ? `Clase agendada. ${data.warning}` : "Clase agendada");
+  }
+
+  async function editSesion(id: number, titulo: string, fecha: string, meetUrl: string | undefined) {
+    const res = await fetch(`/api/zoom/sessions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titulo, fecha, ...(meetUrl !== undefined ? { meetUrl } : {}) }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data) {
+      flash(`No se pudo reprogramar la clase: ${data?.error ?? "error desconocido"}`);
+      return;
+    }
+    setCourseSessions((ss) =>
+      ss
+        .map((s) =>
+          s.id === id
+            ? { id: data.id, courseCode: data.course_code, titulo: data.titulo, fecha: data.fecha, meetUrl: data.meet_url }
+            : s
+        )
+        .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    );
+    const fechaLabel = new Date(data.fecha).toLocaleString("es-AR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    fetch("/api/email/clase-reprogramada", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseCode: data.course_code, titulo: data.titulo, fechaLabel }),
+    }).catch(() => {});
+    flash(data.warning ? `Clase reprogramada. ${data.warning}` : "Clase reprogramada");
+  }
+
+  async function cancelSesion(id: number) {
+    const res = await fetch(`/api/zoom/sessions/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      flash(`No se pudo cancelar la clase: ${data?.error ?? "error desconocido"}`);
+      return;
+    }
+    setCourseSessions((ss) => ss.filter((s) => s.id !== id));
+    flash("Clase cancelada");
+  }
 
   async function addModule(titulo: string) {
     if (!editingCourse) return;
@@ -888,6 +986,7 @@ export function AdminClient({
         enrolled={editingEnrolled}
         pool={pool}
         modules={courseModules}
+        sessions={courseSessions}
         onClose={closeEditor}
         onSave={saveCourse}
         onAssign={assignStudent}
@@ -898,6 +997,9 @@ export function AdminClient({
         onAddModule={addModule}
         onRenameModule={renameModule}
         onRemoveModule={removeModule}
+        onAddSession={addSesion}
+        onEditSession={editSesion}
+        onCancelSession={cancelSesion}
       />
 
       <FichaDrawer

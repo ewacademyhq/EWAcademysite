@@ -5,7 +5,6 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   getMyTeachingCourses,
   getMyStudentEnrollments,
-  getMyReceiptQueue,
   getMyUpcomingSessions,
   getMyLiquidacion,
   getMyFacturas,
@@ -20,9 +19,8 @@ export default async function DocentePage() {
 
   const courses = await getMyTeachingCourses(user.id, user.nombre);
   const codes = courses.filter((c) => c.estado === "publicado").map((c) => c.code);
-  const [enrollments, queue, sessions, liquidacion, facturas, verticales] = await Promise.all([
+  const [enrollments, sessions, liquidacion, facturas, verticales] = await Promise.all([
     getMyStudentEnrollments(codes),
-    getMyReceiptQueue(codes),
     getMyUpcomingSessions(codes),
     getMyLiquidacion(user.id),
     getMyFacturas(user.id),
@@ -37,7 +35,6 @@ export default async function DocentePage() {
         docenteBio={user.bio}
         courses={courses}
         enrollments={enrollments}
-        queue={queue}
         sessions={sessions}
         liquidacion={liquidacion}
         facturas={facturas}

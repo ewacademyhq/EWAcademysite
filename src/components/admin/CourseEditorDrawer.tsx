@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { Course, Enrollment, EstadoCurso, Modalidad, PagoTipo, Vertical } from "@/lib/types";
+import type { Course, CourseSession, Enrollment, EstadoCurso, Modalidad, PagoTipo, Vertical } from "@/lib/types";
 import { PRECIO_MIN, docentePagoOf, nextCode } from "@/lib/business";
 import { formatARS } from "@/lib/format";
 import { todayISO, isoToDMY, dmyToISO } from "@/lib/date";
@@ -10,6 +10,22 @@ import type { PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
 
 const NUEVA_VERTICAL = "__nueva__";
+
+/** ISO completo -> valor local para `<input type="datetime-local">`. */
+function toDatetimeLocalValue(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function sessionParts(iso: string) {
+  const d = new Date(iso);
+  return {
+    dia: d.toLocaleDateString("es-AR", { day: "2-digit" }),
+    mes: d.toLocaleDateString("es-AR", { month: "short" }).replace(".", "").slice(0, 3).toUpperCase(),
+    hora: d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
+  };
+}
 
 export interface CourseDraft {
   origCode: string | null;
@@ -108,6 +124,7 @@ export function CourseEditorDrawer({
   enrolled,
   pool,
   modules,
+  sessions,
   onClose,
   onSave,
   onAssign,
@@ -118,6 +135,9 @@ export function CourseEditorDrawer({
   onAddModule,
   onRenameModule,
   onRemoveModule,
+  onAddSession,
+  onEditSession,
+  onCancelSession,
 }: {
   mode: "new" | "edit" | null;
   initialCourse: Course | null;
@@ -127,6 +147,7 @@ export function CourseEditorDrawer({
   enrolled: Enrollment[];
   pool: PersonOption[];
   modules: ModuleRow[];
+  sessions: CourseSession[];
   onClose: () => void;
   onSave: (course: Course, origCode: string | null) => void;
   onAssign: (person: PersonOption, motivo: string) => void;
@@ -137,6 +158,9 @@ export function CourseEditorDrawer({
   onAddModule: (titulo: string) => void;
   onRenameModule: (id: number, titulo: string) => void;
   onRemoveModule: (id: number) => void;
+  onAddSession: (titulo: string, fecha: string, meetUrl: string) => void;
+  onEditSession: (id: number, titulo: string, fecha: string, meetUrl: string | undefined) => void;
+  onCancelSession: (id: number) => void;
 }) {
   // El padre remonta este componente con una `key` distinta cada vez que se
   // abre para un curso distinto (o para "nuevo"), así que el estado inicial
@@ -146,6 +170,15 @@ export function CourseEditorDrawer({
   const [addPick, setAddPick] = useState("");
   const [addMotivo, setAddMotivo] = useState("");
   const [newModuleTitulo, setNewModuleTitulo] = useState("");
+  const [showSessionForm, setShowSessionForm] = useState(false);
+  const [nuevaSesionTitulo, setNuevaSesionTitulo] = useState("");
+  const [nuevaSesionFecha, setNuevaSesionFecha] = useState("");
+  const [nuevaSesionMeetUrl, setNuevaSesionMeetUrl] = useState("");
+  const [editingSesionId, setEditingSesionId] = useState<number | null>(null);
+  const [editSesionTitulo, setEditSesionTitulo] = useState("");
+  const [editSesionFecha, setEditSesionFecha] = useState("");
+  const [editSesionMeetUrl, setEditSesionMeetUrl] = useState("");
+  const [editSesionMeetUrlOriginal, setEditSesionMeetUrlOriginal] = useState("");
   const [subiendoImagen, setSubiendoImagen] = useState(false);
   const imagenInputRef = useRef<HTMLInputElement>(null);
   const [creandoVertical, setCreandoVertical] = useState(false);
@@ -175,6 +208,49 @@ export function CourseEditorDrawer({
     }
     const { data } = supabase.storage.from("cursos").getPublicUrl(path);
     patch("imagenUrl", data.publicUrl);
+  }
+
+  function agendarSesion() {
+    if (!nuevaSesionTitulo.trim() || !nuevaSesionFecha) {
+      window.alert("Completá título y fecha para agendar la clase.");
+      return;
+    }
+    if (new Date(nuevaSesionFecha) <= new Date()) {
+      window.alert("La fecha de la clase tiene que ser futura.");
+      return;
+    }
+    onAddSession(nuevaSesionTitulo.trim(), new Date(nuevaSesionFecha).toISOString(), nuevaSesionMeetUrl.trim());
+    setNuevaSesionTitulo("");
+    setNuevaSesionFecha("");
+    setNuevaSesionMeetUrl("");
+    setShowSessionForm(false);
+  }
+
+  function empezarReprogramarSesion(s: CourseSession) {
+    setEditingSesionId(s.id);
+    setEditSesionTitulo(s.titulo);
+    setEditSesionFecha(toDatetimeLocalValue(s.fecha));
+    setEditSesionMeetUrl(s.meetUrl);
+    setEditSesionMeetUrlOriginal(s.meetUrl);
+  }
+
+  function guardarReprogramacionSesion(id: number) {
+    if (!editSesionTitulo.trim() || !editSesionFecha) {
+      window.alert("Completá título y fecha para reprogramar la clase.");
+      return;
+    }
+    if (new Date(editSesionFecha) <= new Date()) {
+      window.alert("La fecha de la clase tiene que ser futura.");
+      return;
+    }
+    const meetUrlCambiado = editSesionMeetUrl.trim() !== editSesionMeetUrlOriginal.trim();
+    onEditSession(
+      id,
+      editSesionTitulo.trim(),
+      new Date(editSesionFecha).toISOString(),
+      meetUrlCambiado ? editSesionMeetUrl.trim() : undefined
+    );
+    setEditingSesionId(null);
   }
 
   const precio = Number(draft.precio) || 0;
@@ -878,6 +954,140 @@ export function CourseEditorDrawer({
                   >
                     Agregar
                   </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <label className={labelClass}>Clases en vivo (Zoom)</label>
+              {draft.origCode && (
+                <button
+                  onClick={() => setShowSessionForm((v) => !v)}
+                  className="text-[11px] font-medium uppercase tracking-[.06em] text-[var(--accent)] hover:underline"
+                >
+                  {showSessionForm ? "Cancelar" : "Programar clase"}
+                </button>
+              )}
+            </div>
+            {!draft.origCode ? (
+              <p className="mt-2 text-[12px] text-[var(--faint)]">
+                Guardá el curso antes de agendar clases.
+              </p>
+            ) : (
+              <>
+                {showSessionForm && (
+                  <div className="mt-2 flex flex-col gap-2 border border-[var(--line2)] bg-[var(--surface2)] p-3">
+                    <input
+                      value={nuevaSesionTitulo}
+                      onChange={(e) => setNuevaSesionTitulo(e.target.value)}
+                      placeholder="Título"
+                      className={inputClass}
+                    />
+                    <input
+                      type="datetime-local"
+                      value={nuevaSesionFecha}
+                      onChange={(e) => setNuevaSesionFecha(e.target.value)}
+                      className={inputClass}
+                    />
+                    <input
+                      value={nuevaSesionMeetUrl}
+                      onChange={(e) => setNuevaSesionMeetUrl(e.target.value)}
+                      placeholder="Link manual (opcional — vacío crea la reunión en Zoom sola)"
+                      className={inputClass}
+                    />
+                    <button
+                      onClick={agendarSesion}
+                      className="h-10 bg-[var(--accent)] text-[12.5px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] hover:bg-[var(--accent-600)]"
+                    >
+                      Agendar
+                    </button>
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-col gap-px bg-[var(--line)]">
+                  {sessions.length === 0 && (
+                    <div className="bg-[var(--surface)] px-4 py-3 text-[13px] text-[var(--faint)]">
+                      Sin clases agendadas todavía.
+                    </div>
+                  )}
+                  {sessions.map((s) => {
+                    if (editingSesionId === s.id) {
+                      return (
+                        <div key={s.id} className="flex flex-col gap-2 bg-[var(--surface2)] px-4 py-3">
+                          <input
+                            value={editSesionTitulo}
+                            onChange={(e) => setEditSesionTitulo(e.target.value)}
+                            placeholder="Título"
+                            className={inputClass}
+                          />
+                          <input
+                            type="datetime-local"
+                            value={editSesionFecha}
+                            onChange={(e) => setEditSesionFecha(e.target.value)}
+                            className={inputClass}
+                          />
+                          <input
+                            value={editSesionMeetUrl}
+                            onChange={(e) => setEditSesionMeetUrl(e.target.value)}
+                            placeholder="Link de la clase"
+                            className={inputClass}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => guardarReprogramacionSesion(s.id)}
+                              className="h-9 flex-1 bg-[var(--accent)] text-[12px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] hover:bg-[var(--accent-600)]"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              onClick={() => setEditingSesionId(null)}
+                              className="h-9 px-3 text-[12px] text-[var(--faint)] hover:text-[var(--text)]"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const { dia, mes, hora } = sessionParts(s.fecha);
+                    return (
+                      <div key={s.id} className="flex items-center justify-between gap-3 bg-[var(--surface)] px-4 py-3 text-[13px]">
+                        <div className="flex items-center gap-3">
+                          <span className="shrink-0 text-[11px] text-[var(--faint)]">
+                            {dia} {mes} · {hora}
+                          </span>
+                          <span>{s.titulo}</span>
+                          {s.meetUrl && (
+                            <a
+                              href={s.meetUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11.5px] text-[var(--accent)] hover:underline"
+                            >
+                              Link
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 gap-3">
+                          <button
+                            onClick={() => empezarReprogramarSesion(s)}
+                            className="text-[11px] font-medium uppercase tracking-[.06em] text-[var(--faint)] hover:text-[var(--accent)]"
+                          >
+                            Reprogramar
+                          </button>
+                          <button
+                            onClick={() => onCancelSession(s.id)}
+                            className="text-[11px] font-medium uppercase tracking-[.06em] text-[var(--faint)] hover:text-[var(--danger)]"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}

@@ -1,14 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
-import type { Course, CourseSession, Enrollment, Receipt } from "@/lib/types";
-import type { FacturaRow, Liquidacion } from "@/lib/data/docente";
+import type { Course, CourseSession } from "@/lib/types";
+import type { DocenteStudent, FacturaRow, Liquidacion } from "@/lib/data/docente";
 import { createClient } from "@/lib/supabase/client";
 import { formatARS } from "@/lib/format";
 import { BackLink } from "@/components/ui/BackLink";
-import { StatusChip } from "@/components/ui/StatusChip";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Toast } from "@/components/ui/Toast";
 import { PropuestasDocente } from "@/components/docente/PropuestasDocente";
 
@@ -104,7 +101,6 @@ export function DocenteClient({
   docenteBio,
   courses,
   enrollments,
-  queue,
   sessions,
   liquidacion,
   facturas,
@@ -114,8 +110,7 @@ export function DocenteClient({
   docenteId: string;
   docenteBio: string | null;
   courses: Course[];
-  enrollments: Enrollment[];
-  queue: Receipt[];
+  enrollments: DocenteStudent[];
   sessions: CourseSession[];
   liquidacion: Liquidacion;
   facturas: FacturaRow[];
@@ -176,7 +171,7 @@ export function DocenteClient({
         <div className="px-[34px] py-10">
           <p className="max-w-[52ch] text-[14.5px] leading-[1.6] text-[var(--dim)]">
             Cuando administración te asigne un curso o apruebe una propuesta
-            tuya, tus alumnos y comprobantes pendientes van a aparecer acá.
+            tuya, va a aparecer acá con tus alumnos y tu calendario de clases.
           </p>
         </div>
         <PropuestasDocente
@@ -194,7 +189,6 @@ export function DocenteClient({
   const totalAlumnos = new Set(
     enrollments.filter((e) => cursosDictando.some((c) => c.code === e.code)).map((e) => e.id)
   ).size;
-  const pending = queue.filter((q) => q.curso === code);
   const agenda = sessionsState.filter((s) => s.courseCode === code);
   const currentCourse = courseDrafts.find((c) => c.code === code);
 
@@ -500,38 +494,27 @@ export function DocenteClient({
           <div className="border-b border-[var(--line)] px-6 py-4 text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
             Alumnos — {code}
           </div>
-          <div className="overflow-x-auto">
-            <div className="min-w-[560px]">
-              <div className="grid grid-cols-[1.4fr_.95fr_.8fr_auto] gap-4 border-b border-[var(--line)] px-6 py-3 text-[11px] font-medium uppercase tracking-[.08em] text-[var(--faint)]">
-                <span>Alumno</span>
-                <span>Estado</span>
-                <span>Progreso</span>
-                <span className="justify-self-end">Último pago</span>
+          <div>
+            {students.length === 0 && (
+              <p className="px-6 py-6 text-[13px] text-[var(--faint)]">Todavía no hay alumnos en este curso.</p>
+            )}
+            {students.map((s, i) => (
+              <div
+                key={s.id}
+                className={`flex items-center gap-3 px-6 py-3 text-[13px] ${
+                  i !== students.length - 1 ? "border-b border-[var(--line)]" : ""
+                }`}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line2)] text-[11px] font-medium">
+                  {s.ini}
+                </span>
+                {s.nombre}
               </div>
-              {students.map((s) => (
-                <div
-                  key={s.id}
-                  className="grid grid-cols-[1.4fr_.95fr_.8fr_auto] items-center gap-4 border-b border-[var(--line)] px-6 py-3.5 text-[13px] last:border-b-0"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line2)] text-[11px] font-medium">
-                      {s.ini}
-                    </span>
-                    {s.nombre}
-                  </span>
-                  <StatusChip estado={s.estado} />
-                  <ProgressBar
-                    percent={parseInt(s.prog, 10)}
-                    tone={s.estado === "finalizada" ? "dim" : "accent"}
-                  />
-                  <span className="justify-self-end text-[var(--dim)]">{s.pago}</span>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
           <div className="border-t border-[var(--line)] px-6 py-3 text-[12.5px] text-[var(--faint)]">
-            El estado de la matrícula lo administra la dirección. Como
-            docente lo ves, pero no lo modificás.
+            Matrícula, pagos y estado los administra la dirección — como
+            docente solo ves quién cursa.
           </div>
         </div>
 
@@ -639,7 +622,7 @@ export function DocenteClient({
           </div>
         </div>
 
-        <div id="material" className="col-span-12 scroll-mt-6 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-7">
+        <div id="material" className="col-span-12 scroll-mt-6 border border-[var(--line)] bg-[var(--surface)] p-6">
           <div className="flex items-center justify-between">
             <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
               Material en Drive
@@ -692,33 +675,6 @@ export function DocenteClient({
               Todavía no vinculaste una carpeta de Drive para este curso.
             </p>
           )}
-        </div>
-
-        <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-5">
-          <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
-            Comprobantes del curso
-          </div>
-          <div
-            className="mt-3 font-bold"
-            style={{
-              fontFamily: "var(--font-humane)",
-              fontSize: "78px",
-              lineHeight: 0.78,
-              color: pending.length ? "var(--accent)" : "var(--good)",
-            }}
-          >
-            {pending.length}
-          </div>
-          <p className="mt-2 text-[13.5px] leading-[1.5] text-[var(--dim)]">
-            esperando revisión. Podés aprobar los de tus cursos; el resto lo
-            ve administración.
-          </p>
-          <Link
-            href="/admin/pagos"
-            className="mt-5 inline-flex h-11 items-center border border-[var(--accent)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-ink)]"
-          >
-            Abrir cola de revisión
-          </Link>
         </div>
 
         <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6">
