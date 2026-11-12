@@ -92,4 +92,6 @@ export interface Enrollment {
   prog: string;
   /** Fecha/hora ISO en que el alumno pidió la baja, o null si no pidió ninguna. */
   bajaSolicitadaAt?: string | null;
+  /** EWA-040: si el alumno todavía no confirmó que su email es real (solo se trae en el admin). */
+  emailVerificado?: boolean;
 }

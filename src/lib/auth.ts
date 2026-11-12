@@ -7,6 +7,7 @@ export interface CurrentUser {
   email: string;
   rol: Rol;
   bio: string | null;
+  emailVerificado: boolean;
 }
 
 /** Usuario autenticado + su perfil de `public.users`, o `null` si no hay sesión. */
@@ -20,7 +21,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("nombre, email, rol, bio")
+    .select("nombre, email, rol, bio, email_verificado")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -32,5 +33,6 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     email: profile.email,
     rol: profile.rol as Rol,
     bio: profile.bio,
+    emailVerificado: profile.email_verificado,
   };
 }

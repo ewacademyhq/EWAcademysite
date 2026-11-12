@@ -496,7 +496,7 @@ export function DocenteClient({
       </div>
 
       <div className="grid grid-cols-12 gap-4 px-[34px] py-6">
-        <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] lg:col-span-8">
+        <div id="alumnos" className="col-span-12 scroll-mt-6 border border-[var(--line)] bg-[var(--surface)] lg:col-span-8">
           <div className="border-b border-[var(--line)] px-6 py-4 text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
             Alumnos — {code}
           </div>
@@ -535,7 +535,7 @@ export function DocenteClient({
           </div>
         </div>
 
-        <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-4">
+        <div id="clases-en-vivo" className="col-span-12 scroll-mt-6 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-4">
           <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
             Calendario en vivo
           </div>
@@ -639,7 +639,7 @@ export function DocenteClient({
           </div>
         </div>
 
-        <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-7">
+        <div id="material" className="col-span-12 scroll-mt-6 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-7">
           <div className="flex items-center justify-between">
             <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
               Material en Drive

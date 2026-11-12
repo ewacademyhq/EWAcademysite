@@ -21,17 +21,17 @@ export function navFor(role: Role, defaultCourseCode: string): NavItem[] {
         href: `/curso/${defaultCourseCode}`,
         isActive: (p) => p.startsWith("/curso"),
       },
-      { label: "Pagos", href: "/panel", isActive: () => false },
-      { label: "Certificados", href: "/panel", isActive: () => false },
+      { label: "Pagos", href: "/panel#pagos", isActive: () => false },
+      { label: "Certificados", href: "/panel#certificados", isActive: () => false },
     ];
   }
 
   if (role === "docente") {
     return [
       { label: "Resumen", href: "/docente", isActive: (p) => p === "/docente" },
-      { label: "Alumnos", href: "/docente", isActive: () => false },
-      { label: "Material", href: "/docente", isActive: () => false },
-      { label: "Clases en vivo", href: "/docente", isActive: () => false },
+      { label: "Alumnos", href: "/docente#alumnos", isActive: () => false },
+      { label: "Material", href: "/docente#material", isActive: () => false },
+      { label: "Clases en vivo", href: "/docente#clases-en-vivo", isActive: () => false },
     ];
   }
 

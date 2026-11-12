@@ -63,7 +63,17 @@ export function MatriculasTab({
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line2)] text-[11px] font-medium">
                     {e.ini}
                   </span>
-                  {e.nombre}
+                  <span>
+                    {e.nombre}
+                    {e.emailVerificado === false && (
+                      <span
+                        title="Este alumno todavía no confirmó que su email sea real"
+                        className="ml-2 text-[10.5px] font-medium uppercase tracking-[.04em] text-[var(--danger)]"
+                      >
+                        email sin confirmar
+                      </span>
+                    )}
+                  </span>
                 </span>
                 <span className="text-[var(--dim)]">{e.code}</span>
                 <div className="flex flex-col gap-1">

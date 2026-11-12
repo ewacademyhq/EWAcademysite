@@ -31,6 +31,34 @@ function AyudaLinks() {
   );
 }
 
+function EmailVerificacionBanner() {
+  const [estado, setEstado] = useState<"idle" | "enviando" | "enviado">("idle");
+
+  async function reenviar() {
+    setEstado("enviando");
+    try {
+      await fetch("/api/auth/enviar-verificacion-email", { method: "POST" });
+    } finally {
+      setEstado("enviado");
+    }
+  }
+
+  return (
+    <div className="mx-[34px] mt-6 flex flex-wrap items-center justify-between gap-3 border-l-[3px] border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3 text-[13px] text-[var(--text)]">
+      <span>
+        Todavía no confirmaste tu email — revisá tu casilla y hacé clic en el link que te mandamos al registrarte.
+      </span>
+      <button
+        onClick={reenviar}
+        disabled={estado !== "idle"}
+        className="text-[11px] font-medium uppercase tracking-[.06em] text-[var(--accent)] hover:underline disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {estado === "enviado" ? "Reenviado" : estado === "enviando" ? "Enviando…" : "Reenviar mail"}
+      </button>
+    </div>
+  );
+}
+
 const today = new Intl.DateTimeFormat("es-AR", {
   weekday: "long",
   day: "numeric",
@@ -42,10 +70,12 @@ export function PanelClient({
   enrollments,
   courses,
   nextSessionByCourse,
+  emailVerificado,
 }: {
   enrollments: Enrollment[];
   courses: Course[];
   nextSessionByCourse: Record<string, CourseSession | null>;
+  emailVerificado: boolean;
 }) {
   const [enroll, setEnroll] = useState(enrollments);
   const [code, setCode] = useState(enrollments[0]?.code ?? "");
@@ -106,6 +136,7 @@ export function PanelClient({
           </div>
           <p className="mt-2 text-[13.5px] text-[var(--dim)]">{todayLabel}</p>
         </div>
+        {!emailVerificado && <EmailVerificacionBanner />}
         <div className="px-[34px] py-10">
           <p className="max-w-[52ch] text-[14.5px] leading-[1.6] text-[var(--dim)]">
             Cuando te matricules en un curso, tu progreso y tus pagos van a
@@ -179,6 +210,8 @@ export function PanelClient({
         </div>
       </div>
 
+      {!emailVerificado && <EmailVerificacionBanner />}
+
       <div className="grid grid-cols-12 gap-4 px-[34px] py-6">
         <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 lg:col-span-7">
           <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--accent)]">
@@ -196,7 +229,7 @@ export function PanelClient({
               key={enrollment.code}
             />
           </div>
-          <div className="mt-6 flex flex-wrap items-center gap-4">
+          <div id="certificados" className="mt-6 flex flex-wrap items-center gap-4 scroll-mt-6">
             <Link
               href={`/curso/${course.code}`}
               className="inline-flex h-11 items-center bg-[var(--accent)] px-5 text-[13px] font-medium uppercase tracking-[.06em] text-[var(--accent-ink)] transition-colors hover:bg-[var(--accent-600)]"
@@ -271,7 +304,7 @@ export function PanelClient({
           </div>
         </div>
 
-        <div className="col-span-12 border border-[var(--line)] bg-[var(--surface)] p-6 sm:col-span-6 lg:col-span-4">
+        <div id="pagos" className="col-span-12 scroll-mt-6 border border-[var(--line)] bg-[var(--surface)] p-6 sm:col-span-6 lg:col-span-4">
           <div className="text-[11.5px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
             Pagaste
           </div>

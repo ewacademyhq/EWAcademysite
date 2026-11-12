@@ -120,17 +120,18 @@ interface EnrollmentRow {
   medio: "Mercado Pago" | "Transferencia" | "Manual" | null;
   progreso: number;
   baja_solicitada_at: string | null;
-  alumno: { nombre: string } | { nombre: string }[] | null;
+  alumno: { nombre: string; email_verificado: boolean } | { nombre: string; email_verificado: boolean }[] | null;
 }
 
-function alumnoNombre(row: EnrollmentRow): string {
+function alumnoInfo(row: EnrollmentRow): { nombre: string; emailVerificado: boolean } {
   const a = row.alumno;
-  if (!a) return "(sin nombre)";
-  return Array.isArray(a) ? a[0]?.nombre ?? "(sin nombre)" : a.nombre;
+  if (!a) return { nombre: "(sin nombre)", emailVerificado: true };
+  const u = Array.isArray(a) ? a[0] : a;
+  return { nombre: u?.nombre ?? "(sin nombre)", emailVerificado: u?.email_verificado ?? true };
 }
 
 function mapEnrollmentRow(row: EnrollmentRow): Enrollment {
-  const nombre = alumnoNombre(row);
+  const { nombre, emailVerificado } = alumnoInfo(row);
   return {
     id: row.id,
     userId: row.user_id,
@@ -144,11 +145,12 @@ function mapEnrollmentRow(row: EnrollmentRow): Enrollment {
     medio: row.medio ?? "Mercado Pago",
     prog: `${row.progreso}%`,
     bajaSolicitadaAt: row.baja_solicitada_at,
+    emailVerificado,
   };
 }
 
 const ENROLLMENT_COLUMNS =
-  "id, user_id, course_code, cuota_congelada, congelada_desde, estado, ultimo_pago_at, medio, progreso, baja_solicitada_at, alumno:users!user_id(nombre)";
+  "id, user_id, course_code, cuota_congelada, congelada_desde, estado, ultimo_pago_at, medio, progreso, baja_solicitada_at, alumno:users!user_id(nombre, email_verificado)";
 
 export async function getAllEnrollments(): Promise<Enrollment[]> {
   const supabase = await createClient();
@@ -228,6 +230,8 @@ export interface DocenteConCursos {
   activo: boolean;
   cursos: string[];
   ultimaFactura: UltimaFactura | null;
+  /** Reusa EWA-040: en un docente, significa que ya pasó por /activar-cuenta (invitación aceptada). */
+  emailVerificado: boolean;
 }
 
 interface DocenteRow {
@@ -235,6 +239,7 @@ interface DocenteRow {
   nombre: string;
   email: string;
   activo: boolean;
+  email_verificado: boolean;
   cursos: { titulo: string }[] | null;
 }
 
@@ -268,7 +273,7 @@ export async function getDocentesConCursos(): Promise<DocenteConCursos[]> {
   const [{ data, error }, ultimasFacturas] = await Promise.all([
     supabase
       .from("users")
-      .select("id, nombre, email, activo, cursos:courses!docente_id(titulo)")
+      .select("id, nombre, email, activo, email_verificado, cursos:courses!docente_id(titulo)")
       .eq("rol", "docente")
       .order("nombre"),
     getUltimasFacturasPorDocente(),
@@ -282,6 +287,7 @@ export async function getDocentesConCursos(): Promise<DocenteConCursos[]> {
     activo: row.activo,
     cursos: (row.cursos ?? []).map((c) => c.titulo),
     ultimaFactura: ultimasFacturas[row.id] ?? null,
+    emailVerificado: row.email_verificado,
   }));
 }
 

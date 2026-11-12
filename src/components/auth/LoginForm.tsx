@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ROLE_HOME, type Rol } from "@/lib/role-home";
@@ -78,9 +79,17 @@ export function LoginForm() {
       </div>
 
       <div>
-        <label className="text-[11px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
-          Contraseña
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-medium uppercase tracking-[.14em] text-[var(--faint)]">
+            Contraseña
+          </label>
+          <Link
+            href="/recuperar-contrasena"
+            className="text-[11px] text-[var(--faint)] hover:text-[var(--accent)] hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
         <input
           type="password"
           required

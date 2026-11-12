@@ -41,6 +41,7 @@ export default async function PanelPage() {
         enrollments={enrollments}
         courses={courses}
         nextSessionByCourse={nextSessionByCourse}
+        emailVerificado={user.emailVerificado}
       />
     </AppShell>
   );

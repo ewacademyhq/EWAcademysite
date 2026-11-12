@@ -704,7 +704,9 @@ export function AdminClient({
       flash(`No se pudo dar de alta: ${json.error ?? "error desconocido"}`);
       return false;
     }
-    setDocentesList((ds) => ds.concat({ id: json.id, nombre, email, activo: true, cursos: [], ultimaFactura: null }));
+    setDocentesList((ds) =>
+      ds.concat({ id: json.id, nombre, email, activo: true, cursos: [], ultimaFactura: null, emailVerificado: false })
+    );
     setDocentesOptions((ds) => ds.concat({ id: json.id, nombre }));
     flash(`${nombre} dado de alta — le llega una invitación por correo.`);
     return true;
@@ -754,6 +756,20 @@ export function AdminClient({
     setVerticalesOptions((vs) => vs.filter((v) => v.nombre !== nombre));
     flash(`Vertical "${nombre}" eliminada`);
     return true;
+  }
+
+  async function reenviarInvitacionDocente(id: string) {
+    const res = await fetch("/api/admin/docentes/reenviar-invitacion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      flash(`No se pudo reenviar: ${json.error ?? "error desconocido"}`);
+      return;
+    }
+    flash("Invitación reenviada");
   }
 
   async function marcarFacturaPagada(docenteId: string, facturaId: number) {
@@ -858,6 +874,7 @@ export function AdminClient({
           onCreate={createDocente}
           onToggleActivo={toggleDocenteActivo}
           onMarcarFacturaPagada={marcarFacturaPagada}
+          onReenviarInvitacion={reenviarInvitacionDocente}
         />
       )}
 

@@ -88,6 +88,11 @@ export function ActivarCuentaForm() {
       return;
     }
 
+    // Llegar hasta acá ya prueba que el email es real (vino de un link que
+    // solo pudo abrir quien tiene esa casilla) — se marca verificado directo,
+    // sin pasar por el flujo de token de EWA-040.
+    await supabase.rpc("mark_my_email_verificado");
+
     const {
       data: { user },
     } = await supabase.auth.getUser();

@@ -20,14 +20,23 @@ export function DocentesTab({
   onCreate,
   onToggleActivo,
   onMarcarFacturaPagada,
+  onReenviarInvitacion,
 }: {
   docentes: DocenteConCursos[];
   onCreate: (email: string, nombre: string) => Promise<boolean>;
   onToggleActivo: (id: string, activo: boolean) => void;
   onMarcarFacturaPagada: (docenteId: string, facturaId: number) => void;
+  onReenviarInvitacion: (id: string) => void;
 }) {
   const [email, setEmail] = useState("");
   const [nombre, setNombre] = useState("");
+  const [reenviando, setReenviando] = useState<string | null>(null);
+
+  async function handleReenviar(id: string) {
+    setReenviando(id);
+    await onReenviarInvitacion(id);
+    setReenviando(null);
+  }
 
   const puedeCrear = email.trim().length > 3 && nombre.trim().length > 1;
 
@@ -145,7 +154,17 @@ export function DocentesTab({
               ) : (
                 <span className="text-[var(--faint)]">Sin facturas</span>
               )}
-              <div className="justify-self-end">
+              <div className="flex justify-self-end gap-2">
+                {!d.emailVerificado && d.activo && (
+                  <button
+                    onClick={() => handleReenviar(d.id)}
+                    disabled={reenviando === d.id}
+                    title="Todavía no activó su cuenta — le reenvía un link nuevo"
+                    className="h-8 border border-[var(--line2)] px-3 text-[11.5px] font-medium uppercase tracking-[.06em] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {reenviando === d.id ? "Enviando…" : "Reenviar invitación"}
+                  </button>
+                )}
                 <button
                   onClick={() => onToggleActivo(d.id, !d.activo)}
                   className="h-8 border px-3 text-[11.5px] font-medium uppercase tracking-[.06em]"

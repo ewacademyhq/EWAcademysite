@@ -144,6 +144,10 @@ export function CheckoutClient({
 
       currentAccount = { id: data.user.id, nombre: nombre.trim(), email: email.trim() };
       setAccount(currentAccount);
+
+      // No bloqueante (EWA-040): si falla, el alumno igual puede seguir
+      // pagando — solo pierde el mail de verificación de esta vez.
+      fetch("/api/auth/enviar-verificacion-email", { method: "POST" }).catch(() => {});
     }
 
     setPaying(true);
