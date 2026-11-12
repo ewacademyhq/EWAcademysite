@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
   if (!authUserId) {
     const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
       data: { nombre },
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/activar-cuenta`,
     });
     if (inviteError || !invited?.user) {
       return NextResponse.json(
