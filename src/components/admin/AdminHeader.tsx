@@ -12,6 +12,7 @@ const TABS = [
   { key: "matriculas", label: "Matrículas", href: "/admin/matriculas", title: "Matrículas", subtitle: "Estado, cuotas y asignación" },
   { key: "economia", label: "Economía", href: "/admin/economia", title: "Economía", subtitle: "Reparto por curso y neto para la academia" },
   { key: "docentes", label: "Docentes", href: "/admin/docentes", title: "Docentes", subtitle: "Alta, baja y cursos asignados" },
+  { key: "ajustes", label: "Ajustes", href: "/admin/ajustes", title: "Ajustes", subtitle: "Modo pre-lanzamiento y configuración general" },
 ] as const;
 
 export function AdminHeader({

@@ -2,11 +2,13 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCourseByCode, registerCourseView } from "@/lib/data/courses";
 import { getCurrentUser } from "@/lib/auth";
+import { getEnrollmentEnabled } from "@/lib/data/siteSettings";
 import { isCourseStale } from "@/lib/business";
 import { createClient } from "@/lib/supabase/server";
 import { getCourseModules } from "@/lib/data/mycourse";
 import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
 import { CheckoutClient } from "@/components/checkout/CheckoutClient";
+import { EnDesarrolloPopup } from "@/components/layout/EnDesarrolloPopup";
 
 async function hasExistingEnrollment(userId: string, courseCode: string): Promise<boolean> {
   const supabase = await createClient();
@@ -38,7 +40,11 @@ export default async function CheckoutPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const [course, user] = await Promise.all([getCourseByCode(code), getCurrentUser()]);
+  const [course, user, enrollmentEnabled] = await Promise.all([
+    getCourseByCode(code),
+    getCurrentUser(),
+    getEnrollmentEnabled(),
+  ]);
 
   if (!course) notFound();
 
@@ -61,7 +67,13 @@ export default async function CheckoutPage({
   return (
     <>
       <CheckoutHeader backHref={user ? "/panel" : "/"} />
-      <CheckoutClient course={course} user={user} modules={modules} />
+      <CheckoutClient
+        course={course}
+        user={user}
+        modules={modules}
+        enrollmentEnabled={enrollmentEnabled}
+      />
+      <EnDesarrolloPopup show={!enrollmentEnabled} />
     </>
   );
 }

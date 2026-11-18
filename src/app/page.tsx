@@ -7,15 +7,18 @@ import { Pagos } from "@/components/landing/Pagos";
 import { ClosingPoster } from "@/components/landing/ClosingPoster";
 import { Footer } from "@/components/landing/Footer";
 import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
+import { EnDesarrolloPopup } from "@/components/layout/EnDesarrolloPopup";
 import { getCourses, getVerticales } from "@/lib/data/courses";
 import { getCurrentUser } from "@/lib/auth";
+import { getEnrollmentEnabled } from "@/lib/data/siteSettings";
 import { dmyToISO, mesAnioLabel, todayISO } from "@/lib/date";
 
 export default async function Home() {
-  const [courses, verticales, user] = await Promise.all([
+  const [courses, verticales, user, enrollmentEnabled] = await Promise.all([
     getCourses(),
     getVerticales(),
     getCurrentUser(),
+    getEnrollmentEnabled(),
   ]);
 
   // Próxima cohorte a arrancar, calculada de los cursos reales — así el
@@ -40,6 +43,7 @@ export default async function Home() {
       </main>
       <Footer />
       <WhatsAppFloat />
+      <EnDesarrolloPopup show={!enrollmentEnabled} />
     </>
   );
 }

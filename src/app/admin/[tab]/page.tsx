@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/AppShell";
 import { AdminClient, type AdminTab } from "@/components/admin/AdminClient";
 import { getCurrentUser } from "@/lib/auth";
+import { getEnrollmentEnabled } from "@/lib/data/siteSettings";
 import {
   getAdminCourses,
   getAllEnrollments,
@@ -13,7 +14,16 @@ import {
   getVerticales,
 } from "@/lib/data/admin";
 
-const VALID_TABS: AdminTab[] = ["kpi", "pagos", "cursos", "propuestas", "matriculas", "economia", "docentes"];
+const VALID_TABS: AdminTab[] = [
+  "kpi",
+  "pagos",
+  "cursos",
+  "propuestas",
+  "matriculas",
+  "economia",
+  "docentes",
+  "ajustes",
+];
 
 export const metadata: Metadata = { title: "Administración", robots: { index: false, follow: false } };
 
@@ -29,15 +39,17 @@ export default async function AdminTabPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [courses, enrollments, queue, docentes, docentesConCursos, alumnos, verticales] = await Promise.all([
-    getAdminCourses(),
-    getAllEnrollments(),
-    getReceiptQueue(),
-    getDocentes(),
-    getDocentesConCursos(),
-    getAlumnos(),
-    getVerticales(),
-  ]);
+  const [courses, enrollments, queue, docentes, docentesConCursos, alumnos, verticales, enrollmentEnabled] =
+    await Promise.all([
+      getAdminCourses(),
+      getAllEnrollments(),
+      getReceiptQueue(),
+      getDocentes(),
+      getDocentesConCursos(),
+      getAlumnos(),
+      getVerticales(),
+      getEnrollmentEnabled(),
+    ]);
 
   return (
     <AppShell role="admin" defaultCourseCode="">
@@ -52,6 +64,7 @@ export default async function AdminTabPage({
         verticales={verticales}
         adminId={user.id}
         adminNombre={user.nombre}
+        initialEnrollmentEnabled={enrollmentEnabled}
       />
     </AppShell>
   );

@@ -27,14 +27,19 @@ function calcularEdad(fechaISO: string): number {
   return edad;
 }
 
+const INSCRIPCIONES_CERRADAS_MSG =
+  "Las inscripciones abren el 1° de diciembre de 2026. ¡Te esperamos!";
+
 export function CheckoutClient({
   course,
   user,
   modules,
+  enrollmentEnabled,
 }: {
   course: Course;
   user: CurrentUser | null;
   modules: ModuleRow[];
+  enrollmentEnabled: boolean;
 }) {
   const router = useRouter();
   const [account, setAccount] = useState<{ id: string; nombre: string; email: string } | null>(
@@ -63,7 +68,12 @@ export function CheckoutClient({
     course.fecha === "Inmediato" ? "ingreso inmediato" : `inicia ${course.fecha}`;
 
   const disabled =
-    paying || confirmed || creatingAccount || (pay === "manual" && !file) || (!account && !acceptedTerms);
+    !enrollmentEnabled ||
+    paying ||
+    confirmed ||
+    creatingAccount ||
+    (pay === "manual" && !file) ||
+    (!account && !acceptedTerms);
 
   async function handleConfirm() {
     if (disabled) return;
@@ -273,7 +283,9 @@ export function CheckoutClient({
     router.refresh();
   }
 
-  const buttonLabel = creatingAccount
+  const buttonLabel = !enrollmentEnabled
+    ? "Inscripciones cerradas"
+    : creatingAccount
     ? "Creando tu cuenta…"
     : paying
     ? "Procesando…"
@@ -550,6 +562,7 @@ export function CheckoutClient({
             type="button"
             onClick={handleConfirm}
             disabled={disabled}
+            title={!enrollmentEnabled ? INSCRIPCIONES_CERRADAS_MSG : undefined}
             className={`mt-6 flex h-12 w-full items-center px-5 text-[13px] font-medium uppercase tracking-[.06em] transition-colors ${
               disabled
                 ? "cursor-not-allowed bg-[var(--surface2)] text-[var(--faint)] opacity-70"
@@ -558,6 +571,12 @@ export function CheckoutClient({
           >
             {buttonLabel}
           </button>
+
+          {!enrollmentEnabled && (
+            <p className="mt-3 text-[12px] leading-[1.5] text-[var(--faint)]">
+              {INSCRIPCIONES_CERRADAS_MSG}
+            </p>
+          )}
 
           {payError && (
             <p className="mt-3 border-l-[3px] border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-[13px] text-[var(--danger)]">

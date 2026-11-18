@@ -16,6 +16,7 @@ import { PropuestasTab } from "@/components/admin/tabs/PropuestasTab";
 import { MatriculasTab } from "@/components/admin/tabs/MatriculasTab";
 import { EconomiaTab } from "@/components/admin/tabs/EconomiaTab";
 import { DocentesTab } from "@/components/admin/tabs/DocentesTab";
+import { AjustesTab } from "@/components/admin/tabs/AjustesTab";
 import { CourseEditorDrawer } from "@/components/admin/CourseEditorDrawer";
 import { VerticalesDrawer } from "@/components/admin/VerticalesDrawer";
 import { FichaDrawer } from "@/components/admin/FichaDrawer";
@@ -23,7 +24,15 @@ import { DeleteDialog } from "@/components/admin/DeleteDialog";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Toast } from "@/components/ui/Toast";
 
-export type AdminTab = "kpi" | "pagos" | "cursos" | "propuestas" | "matriculas" | "economia" | "docentes";
+export type AdminTab =
+  | "kpi"
+  | "pagos"
+  | "cursos"
+  | "propuestas"
+  | "matriculas"
+  | "economia"
+  | "docentes"
+  | "ajustes";
 
 type Snapshot = { queue: Receipt[]; enroll: Enrollment[] };
 
@@ -71,6 +80,7 @@ export function AdminClient({
   verticales,
   adminId,
   adminNombre,
+  initialEnrollmentEnabled,
 }: {
   tab: AdminTab;
   initialCourses: Course[];
@@ -82,6 +92,7 @@ export function AdminClient({
   verticales: VerticalOption[];
   adminId: string;
   adminNombre: string;
+  initialEnrollmentEnabled: boolean;
 }) {
   const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [enroll, setEnroll] = useState<Enrollment[]>(initialEnrollments);
@@ -89,6 +100,7 @@ export function AdminClient({
   const [docentesOptions, setDocentesOptions] = useState<PersonOption[]>(docentes);
   const [docentesList, setDocentesList] = useState<DocenteConCursos[]>(docentesConCursos);
   const [verticalesOptions, setVerticalesOptions] = useState<VerticalOption[]>(verticales);
+  const [enrollmentEnabled, setEnrollmentEnabled] = useState(initialEnrollmentEnabled);
 
   const [editor, setEditor] = useState<"new" | "edit" | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -856,6 +868,20 @@ export function AdminClient({
     return true;
   }
 
+  async function toggleEnrollmentEnabled(enabled: boolean) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ enrollment_enabled: enabled, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (error) {
+      flash(`No se pudo actualizar: ${error.message}`);
+      return;
+    }
+    setEnrollmentEnabled(enabled);
+    flash(enabled ? "Inscripciones habilitadas" : "Inscripciones deshabilitadas");
+  }
+
   async function reenviarInvitacionDocente(id: string) {
     const res = await fetch("/api/admin/docentes/reenviar-invitacion", {
       method: "POST",
@@ -974,6 +1000,9 @@ export function AdminClient({
           onMarcarFacturaPagada={marcarFacturaPagada}
           onReenviarInvitacion={reenviarInvitacionDocente}
         />
+      )}
+      {tab === "ajustes" && (
+        <AjustesTab enrollmentEnabled={enrollmentEnabled} onToggle={toggleEnrollmentEnabled} />
       )}
 
       <CourseEditorDrawer
