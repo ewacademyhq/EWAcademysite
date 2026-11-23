@@ -8,6 +8,7 @@ import type { ModuleRow } from "@/lib/data/mycourse";
 import { formatARS } from "@/lib/format";
 import { calcularEdad } from "@/lib/date";
 import { VERSION_DOCUMENTOS_LEGALES } from "@/lib/legal";
+import { passwordValida, PASSWORD_REQUISITOS_MSG } from "@/lib/password";
 import { Toast } from "@/components/ui/Toast";
 import { createClient } from "@/lib/supabase/client";
 import { HCaptcha, type HCaptchaHandle } from "@/components/auth/HCaptcha";
@@ -76,10 +77,12 @@ export function CheckoutClient({
     let currentAccount = account;
 
     if (!currentAccount) {
-      if (!nombre.trim() || !email.trim() || password.length < 6) {
-        setAccountError(
-          "Completá tu nombre, email y una contraseña de al menos 6 caracteres."
-        );
+      if (!nombre.trim() || !email.trim()) {
+        setAccountError("Completá tu nombre y tu email.");
+        return;
+      }
+      if (!passwordValida(password)) {
+        setAccountError(PASSWORD_REQUISITOS_MSG);
         return;
       }
       if (!fechaNacimiento) {
@@ -351,13 +354,14 @@ export function CheckoutClient({
               />
               <input
                 type="password"
-                placeholder="Contraseña (mín. 6 caracteres)"
+                placeholder="Contraseña (mín. 8, con mayúscula, minúscula y carácter especial)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={confirmed}
                 className="h-12 w-full border border-[var(--line2)] bg-[var(--surface)] px-4 text-[14.5px] placeholder:text-[var(--faint)]"
               />
             </div>
+            <p className="text-[12px] leading-[1.5] text-[var(--faint)]">{PASSWORD_REQUISITOS_MSG}</p>
             <div>
               <label className="text-[12px] uppercase tracking-[.06em] text-[var(--faint)]">
                 Fecha de nacimiento

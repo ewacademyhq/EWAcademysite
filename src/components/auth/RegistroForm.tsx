@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { calcularEdad } from "@/lib/date";
 import { VERSION_DOCUMENTOS_LEGALES } from "@/lib/legal";
+import { passwordValida, PASSWORD_REQUISITOS_MSG } from "@/lib/password";
 import { ROLE_HOME } from "@/lib/role-home";
 import { HCaptcha, type HCaptchaHandle } from "@/components/auth/HCaptcha";
 
@@ -25,8 +26,12 @@ export function RegistroForm() {
     e.preventDefault();
     setError(null);
 
-    if (!nombre.trim() || !email.trim() || password.length < 6) {
-      setError("Completá tu nombre, email y una contraseña de al menos 6 caracteres.");
+    if (!nombre.trim() || !email.trim()) {
+      setError("Completá tu nombre y tu email.");
+      return;
+    }
+    if (!passwordValida(password)) {
+      setError(PASSWORD_REQUISITOS_MSG);
       return;
     }
     if (!fechaNacimiento) {
@@ -131,8 +136,9 @@ export function RegistroForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className={`${inputClass} mt-2`}
-          placeholder="Mín. 6 caracteres"
+          placeholder="Mín. 8, con mayúscula, minúscula y carácter especial"
         />
+        <p className="mt-1.5 text-[12px] leading-[1.5] text-[var(--faint)]">{PASSWORD_REQUISITOS_MSG}</p>
       </div>
 
       <div>

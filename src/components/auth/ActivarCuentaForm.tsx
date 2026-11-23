@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ROLE_HOME, type Rol } from "@/lib/role-home";
+import { passwordValida, PASSWORD_REQUISITOS_MSG } from "@/lib/password";
 
 type Status = "cargando" | "listo" | "error";
 type HashResult =
@@ -70,8 +71,8 @@ export function ActivarCuentaForm() {
     e.preventDefault();
     setFormError(null);
 
-    if (password.length < 6) {
-      setFormError("La contraseña necesita al menos 6 caracteres.");
+    if (!passwordValida(password)) {
+      setFormError(PASSWORD_REQUISITOS_MSG);
       return;
     }
     if (password !== password2) {
@@ -137,6 +138,7 @@ export function ActivarCuentaForm() {
           className={`${inputClass} mt-2`}
           placeholder="••••••••"
         />
+        <p className="mt-1.5 text-[12px] leading-[1.5] text-[var(--faint)]">{PASSWORD_REQUISITOS_MSG}</p>
       </div>
 
       <div>
