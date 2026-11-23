@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AuditEntry, Course, CourseSession, Enrollment, EstadoMatricula, PagoTipo, Receipt } from "@/lib/types";
-import type { DocenteConCursos, PersonOption, VerticalOption } from "@/lib/data/admin";
+import type { AlumnoAdmin, DocenteConCursos, PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
 import { ALLOWED_TRANSITIONS, ESTADOS } from "@/lib/business";
 import { isoToDMY, initials, todayISO } from "@/lib/date";
@@ -16,6 +16,7 @@ import { PropuestasTab } from "@/components/admin/tabs/PropuestasTab";
 import { MatriculasTab } from "@/components/admin/tabs/MatriculasTab";
 import { EconomiaTab } from "@/components/admin/tabs/EconomiaTab";
 import { DocentesTab } from "@/components/admin/tabs/DocentesTab";
+import { UsuariosTab } from "@/components/admin/tabs/UsuariosTab";
 import { AjustesTab } from "@/components/admin/tabs/AjustesTab";
 import { CourseEditorDrawer } from "@/components/admin/CourseEditorDrawer";
 import { VerticalesDrawer } from "@/components/admin/VerticalesDrawer";
@@ -32,6 +33,7 @@ export type AdminTab =
   | "matriculas"
   | "economia"
   | "docentes"
+  | "usuarios"
   | "ajustes";
 
 type Snapshot = { queue: Receipt[]; enroll: Enrollment[] };
@@ -77,6 +79,7 @@ export function AdminClient({
   docentes,
   docentesConCursos,
   alumnos,
+  alumnosAdmin,
   verticales,
   adminId,
   adminNombre,
@@ -89,6 +92,7 @@ export function AdminClient({
   docentes: PersonOption[];
   docentesConCursos: DocenteConCursos[];
   alumnos: PersonOption[];
+  alumnosAdmin: AlumnoAdmin[];
   verticales: VerticalOption[];
   adminId: string;
   adminNombre: string;
@@ -99,6 +103,7 @@ export function AdminClient({
   const [queue, setQueue] = useState<Receipt[]>(initialQueue);
   const [docentesOptions, setDocentesOptions] = useState<PersonOption[]>(docentes);
   const [docentesList, setDocentesList] = useState<DocenteConCursos[]>(docentesConCursos);
+  const [alumnosAdminList, setAlumnosAdminList] = useState<AlumnoAdmin[]>(alumnosAdmin);
   const [verticalesOptions, setVerticalesOptions] = useState<VerticalOption[]>(verticales);
   const [enrollmentEnabled, setEnrollmentEnabled] = useState(initialEnrollmentEnabled);
 
@@ -896,6 +901,53 @@ export function AdminClient({
     flash("Invitación reenviada");
   }
 
+  async function editarEmailAlumno(id: string, email: string): Promise<boolean> {
+    const res = await fetch("/api/admin/alumnos", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, email }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      flash(`No se pudo editar el email: ${json.error ?? "error desconocido"}`);
+      return false;
+    }
+    setAlumnosAdminList((as) => as.map((a) => (a.id === id ? { ...a, email } : a)));
+    flash("Email actualizado");
+    return true;
+  }
+
+  async function restablecerContrasenaAlumno(id: string): Promise<boolean> {
+    const res = await fetch("/api/admin/alumnos/restablecer-contrasena", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      flash(`No se pudo mandar el restablecimiento: ${json.error ?? "error desconocido"}`);
+      return false;
+    }
+    flash("Le mandamos un link para que elija una contraseña nueva");
+    return true;
+  }
+
+  async function toggleAlumnoActivo(id: string, activo: boolean, motivo: string): Promise<boolean> {
+    const res = await fetch("/api/admin/alumnos/activo", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, activo, motivo }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      flash(`No se pudo actualizar: ${json.error ?? "error desconocido"}`);
+      return false;
+    }
+    setAlumnosAdminList((as) => as.map((a) => (a.id === id ? { ...a, activo } : a)));
+    flash(activo ? "Alumno reactivado" : "Alumno desactivado");
+    return true;
+  }
+
   async function marcarFacturaPagada(docenteId: string, facturaId: number) {
     const supabase = createClient();
     const { error } = await supabase.from("facturas").update({ estado: "pagada" }).eq("id", facturaId);
@@ -1000,6 +1052,14 @@ export function AdminClient({
           onToggleActivo={toggleDocenteActivo}
           onMarcarFacturaPagada={marcarFacturaPagada}
           onReenviarInvitacion={reenviarInvitacionDocente}
+        />
+      )}
+      {tab === "usuarios" && (
+        <UsuariosTab
+          alumnos={alumnosAdminList}
+          onEditarEmail={editarEmailAlumno}
+          onRestablecerContrasena={restablecerContrasenaAlumno}
+          onToggleActivo={toggleAlumnoActivo}
         />
       )}
       {tab === "ajustes" && (

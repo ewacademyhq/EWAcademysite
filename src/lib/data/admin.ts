@@ -302,3 +302,34 @@ export async function getAlumnos(): Promise<PersonOption[]> {
   if (error) throw error;
   return data;
 }
+
+export interface AlumnoAdmin {
+  id: string;
+  nombre: string;
+  email: string;
+  activo: boolean;
+  emailVerificado: boolean;
+  createdAt: string;
+}
+
+/** Todos los alumnos registrados, tengan o no una matrícula — EWA-066 (gestión de cuentas desde el admin). */
+export async function getAdminAlumnos(): Promise<AlumnoAdmin[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, nombre, email, activo, email_verificado, created_at")
+    .eq("rol", "alumno")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data as { id: string; nombre: string; email: string; activo: boolean; email_verificado: boolean; created_at: string }[]).map(
+    (row) => ({
+      id: row.id,
+      nombre: row.nombre,
+      email: row.email,
+      activo: row.activo,
+      emailVerificado: row.email_verificado,
+      createdAt: row.created_at,
+    })
+  );
+}
