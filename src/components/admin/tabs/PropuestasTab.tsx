@@ -53,6 +53,7 @@ function PropuestaPendiente({
   course,
   onAprobar,
   onRechazar,
+  onEdit,
 }: {
   course: Course;
   onAprobar: (
@@ -69,6 +70,7 @@ function PropuestaPendiente({
     }
   ) => Promise<boolean>;
   onRechazar: (code: string, motivo: string) => Promise<boolean>;
+  onEdit: (course: Course) => void;
 }) {
   const [precio, setPrecio] = useState("80000");
   const [comision, setComision] = useState("6.2");
@@ -114,6 +116,12 @@ function PropuestaPendiente({
           <h3 className="mt-1 text-[18px] font-medium">{course.titulo}</h3>
           <p className="mt-1 text-[13px] text-[var(--dim)]">Propuesto por {course.docente}</p>
         </div>
+        <button
+          onClick={() => onEdit(course)}
+          className="h-9 shrink-0 border border-[var(--line2)] px-4 text-[12px] font-medium uppercase tracking-[.06em] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        >
+          Editar / agendar Zoom
+        </button>
       </div>
 
       <p className="mt-3 text-[14px] leading-[1.6] text-[var(--dim)]">{course.desc}</p>
@@ -264,6 +272,7 @@ export function PropuestasTab({
   onAprobar,
   onRechazar,
   onPublicar,
+  onEdit,
 }: {
   courses: Course[];
   onAprobar: (
@@ -281,6 +290,7 @@ export function PropuestasTab({
   ) => Promise<boolean>;
   onRechazar: (code: string, motivo: string) => Promise<boolean>;
   onPublicar: (code: string) => Promise<boolean>;
+  onEdit: (course: Course) => void;
 }) {
   const pendientes = courses.filter((c) => c.estado === "propuesta");
   const aprobadas = courses.filter((c) => c.estado === "aprobada");
@@ -298,7 +308,7 @@ export function PropuestasTab({
             <p className="text-[13.5px] text-[var(--faint)]">No hay propuestas esperando revisión.</p>
           )}
           {pendientes.map((c) => (
-            <PropuestaPendiente key={c.code} course={c} onAprobar={onAprobar} onRechazar={onRechazar} />
+            <PropuestaPendiente key={c.code} course={c} onAprobar={onAprobar} onRechazar={onRechazar} onEdit={onEdit} />
           ))}
         </div>
       </section>

@@ -38,6 +38,18 @@ export function bajaEfectivaLabel(bajaSolicitadaAt: string): string {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
+/** Edad en años a partir de una fecha de nacimiento ISO ("YYYY-MM-DD"). */
+export function calcularEdad(fechaISO: string): number {
+  const nacimiento = new Date(fechaISO);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const aunNoCumplio =
+    hoy.getMonth() < nacimiento.getMonth() ||
+    (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
+  if (aunNoCumplio) edad -= 1;
+  return edad;
+}
+
 export function initials(nombre: string): string {
   return nombre
     .split(" ")

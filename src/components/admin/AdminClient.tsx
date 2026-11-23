@@ -967,7 +967,7 @@ export function AdminClient({
       )}
       {tab === "cursos" && (
         <CursosTab
-          courses={courses}
+          courses={courses.filter((c) => c.estado === "aprobada" || c.estado === "publicado")}
           enroll={enroll}
           onEdit={openEditCourse}
           onDelete={requestDelete}
@@ -980,6 +980,7 @@ export function AdminClient({
           onAprobar={aprobarPropuesta}
           onRechazar={rechazarPropuesta}
           onPublicar={publicarCurso}
+          onEdit={openEditCourse}
         />
       )}
       {tab === "matriculas" && (

@@ -51,9 +51,14 @@ export function Header({ user }: { user?: { nombre: string; rol: Rol } | null })
               <LogoutButton />
             </>
           ) : (
-            <Link href="/login" className={btnSecondary}>
-              Ingresar
-            </Link>
+            <>
+              <Link href="/registro" className={btnSecondary}>
+                Registrarme
+              </Link>
+              <Link href="/login" className={btnSecondary}>
+                Ingresar
+              </Link>
+            </>
           )}
           <a href="#catalogo" className={btnPrimary}>
             Ver cursos
@@ -92,7 +97,7 @@ export function Header({ user }: { user?: { nombre: string; rol: Rol } | null })
               </a>
             ))}
           </nav>
-          <div className="mt-5 flex items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-3">
             {user ? (
               <>
                 <Link href={ROLE_HOME[user.rol]} className={btnSecondary} onClick={() => setOpen(false)}>
@@ -101,9 +106,14 @@ export function Header({ user }: { user?: { nombre: string; rol: Rol } | null })
                 <LogoutButton />
               </>
             ) : (
-              <Link href="/login" className={btnSecondary} onClick={() => setOpen(false)}>
-                Ingresar
-              </Link>
+              <>
+                <Link href="/registro" className={btnSecondary} onClick={() => setOpen(false)}>
+                  Registrarme
+                </Link>
+                <Link href="/login" className={btnSecondary} onClick={() => setOpen(false)}>
+                  Ingresar
+                </Link>
+              </>
             )}
             <a href="#catalogo" className={btnPrimary} onClick={() => setOpen(false)}>
               Ver cursos

@@ -6,26 +6,13 @@ import type { Course } from "@/lib/types";
 import type { CurrentUser } from "@/lib/auth";
 import type { ModuleRow } from "@/lib/data/mycourse";
 import { formatARS } from "@/lib/format";
+import { calcularEdad } from "@/lib/date";
+import { VERSION_DOCUMENTOS_LEGALES } from "@/lib/legal";
 import { Toast } from "@/components/ui/Toast";
 import { createClient } from "@/lib/supabase/client";
 import { HCaptcha, type HCaptchaHandle } from "@/components/auth/HCaptcha";
 
 type PayMethod = "mp" | "manual";
-
-// Última actualización declarada en /terminos y /privacidad — si se
-// actualizan esos documentos, este valor tiene que cambiar junto con ellos.
-const VERSION_DOCUMENTOS_LEGALES = "13 de octubre de 2026";
-
-function calcularEdad(fechaISO: string): number {
-  const nacimiento = new Date(fechaISO);
-  const hoy = new Date();
-  let edad = hoy.getFullYear() - nacimiento.getFullYear();
-  const aunNoCumplio =
-    hoy.getMonth() < nacimiento.getMonth() ||
-    (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
-  if (aunNoCumplio) edad -= 1;
-  return edad;
-}
 
 const INSCRIPCIONES_CERRADAS_MSG =
   "Las inscripciones abren el 1° de diciembre de 2026. ¡Te esperamos!";

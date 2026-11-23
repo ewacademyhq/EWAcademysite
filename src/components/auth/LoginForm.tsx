@@ -116,6 +116,13 @@ export function LoginForm() {
       >
         {loading ? "Ingresando…" : "Ingresar"}
       </button>
+
+      <p className="text-center text-[12.5px] text-[var(--faint)]">
+        ¿No tenés cuenta todavía?{" "}
+        <Link href="/registro" className="text-[var(--accent)] hover:underline">
+          Registrate
+        </Link>
+      </p>
     </form>
   );
 }
