@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { formatARS } from "@/lib/format";
 import { Reveal } from "@/components/ui/Reveal";
 import type { Course } from "@/lib/types";
+import { formatHorarioSemanal } from "@/lib/schedule";
 
 function ProximamenteTile({ grande = false }: { grande?: boolean }) {
   return (
@@ -140,6 +141,14 @@ export function Catalogo({
                       ? "Ingreso inmediato"
                       : `Inicio ${course.fecha}`}
                   </div>
+                  {(() => {
+                    const horario = formatHorarioSemanal(course.diasSemana, course.horaInicio);
+                    return horario ? (
+                      <div className="mt-1 text-[13px] text-[var(--dim)]">
+                        <span className="text-[var(--accent)]">→</span> Clases {horario}
+                      </div>
+                    ) : null;
+                  })()}
 
                   <a
                     href={`/checkout/${course.code}`}

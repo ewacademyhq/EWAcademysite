@@ -57,6 +57,8 @@ interface AdminCourseRow {
   pendiente_borrado: boolean;
   estado: EstadoCurso;
   motivo_rechazo: string | null;
+  dias_semana: number[] | null;
+  hora_inicio: string | null;
   docente: { nombre: string } | { nombre: string }[] | null;
 }
 
@@ -92,11 +94,13 @@ function mapCourseRow(row: AdminCourseRow): Course {
     pendienteBorrado: row.pendiente_borrado,
     estado: row.estado,
     motivoRechazo: row.motivo_rechazo,
+    diasSemana: row.dias_semana,
+    horaInicio: row.hora_inicio ? row.hora_inicio.slice(0, 5) : null,
   };
 }
 
 const ADMIN_COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, clases_totales, contenido_actualizado_at, vendidos, vistas, imagen_url, cupo_maximo, cupo_minimo, pendiente_borrado, estado, motivo_rechazo, docente:users!docente_id(nombre)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, docente_id, pago_tipo, pago_valor, comision, clases_totales, contenido_actualizado_at, vendidos, vistas, imagen_url, cupo_maximo, cupo_minimo, pendiente_borrado, estado, motivo_rechazo, dias_semana, hora_inicio, docente:users!docente_id(nombre)";
 
 export async function getAdminCourses(): Promise<Course[]> {
   const supabase = await createClient();

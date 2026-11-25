@@ -8,6 +8,8 @@ import { todayISO, isoToDMY, dmyToISO } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import type { PersonOption, VerticalOption } from "@/lib/data/admin";
 import type { ModuleRow } from "@/lib/data/mycourse";
+import { DIAS_SEMANA } from "@/lib/schedule";
+import { HorarioCalendar } from "@/components/calendar/HorarioCalendar";
 
 const NUEVA_VERTICAL = "__nueva__";
 
@@ -53,6 +55,8 @@ export interface CourseDraft {
   imagenUrl: string;
   driveFolderUrl: string;
   estado: EstadoCurso;
+  diasSemana: number[];
+  horaInicio: string;
 }
 
 function draftFor(course: Course | null, courses: Course[], verticales: VerticalOption[]): CourseDraft {
@@ -84,6 +88,8 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
       imagenUrl: "",
       driveFolderUrl: "",
       estado: "publicado",
+      diasSemana: [],
+      horaInicio: "",
     };
   }
   return {
@@ -112,6 +118,8 @@ function draftFor(course: Course | null, courses: Course[], verticales: Vertical
     imagenUrl: course.imagenUrl ?? "",
     driveFolderUrl: course.driveFolderUrl ?? "",
     estado: course.estado,
+    diasSemana: course.diasSemana ?? [],
+    horaInicio: course.horaInicio ?? "",
   };
 }
 
@@ -286,6 +294,15 @@ export function CourseEditorDrawer({
   if (draft.pagoTipo === "fijo" && (pagoValor < 1 || pagoValor >= precio)) errores.push("El monto fijo al docente tiene que ser mayor a 0 y menor al precio.");
   if (draft.modalidad === "cohorte" && clasesTotales <= 0) errores.push("Las clases totales son obligatorias para un curso de cohorte.");
   if (draft.fechaFin && draft.fechaFin <= todayISO()) errores.push("La fecha de fin de cohorte tiene que ser posterior a hoy.");
+  if (draft.modalidad === "cohorte" && draft.diasSemana.length > 0 && !draft.horaInicio) {
+    errores.push("Falta la hora de las clases en vivo.");
+  }
+  if (draft.modalidad === "cohorte" && draft.horaInicio && draft.diasSemana.length === 0) {
+    errores.push("Elegí al menos un día de la semana para las clases en vivo.");
+  }
+  if (draft.modalidad === "cohorte" && (draft.diasSemana.length > 0 || draft.horaInicio) && !dmyToISO(draft.fecha)) {
+    errores.push("Para cargar un horario de clases en vivo, falta la fecha de inicio.");
+  }
   if (draft.cupoMaximo && cupoMaximo <= 0) errores.push("El cupo máximo tiene que ser mayor a 0.");
   if (draft.modalidad === "cohorte" && draft.cupoMinimo && cupoMinimo <= 0) errores.push("El cupo mínimo tiene que ser mayor a 0.");
   if (draft.modalidad === "cohorte" && draft.cupoMaximo && draft.cupoMinimo && cupoMinimo > cupoMaximo) {
@@ -324,6 +341,8 @@ export function CourseEditorDrawer({
       imagenUrl: draft.imagenUrl || null,
       driveFolderUrl: draft.driveFolderUrl.trim() || null,
       estado: draft.estado,
+      diasSemana: draft.modalidad === "cohorte" && draft.diasSemana.length > 0 ? draft.diasSemana : null,
+      horaInicio: draft.modalidad === "cohorte" && draft.horaInicio ? draft.horaInicio : null,
     };
     onSave(course, draft.origCode);
   }
@@ -731,6 +750,63 @@ export function CourseEditorDrawer({
                   Opcional. Desde 14 días antes de la fecha de inicio, si no se llegó, aparece un aviso en Cursos — no bloquea ni cancela nada solo.
                 </p>
               </div>
+            </div>
+          )}
+
+          {draft.modalidad === "cohorte" && (
+            <div className="flex flex-col gap-4 border border-[var(--line2)] bg-[var(--surface)] p-4">
+              <div className={labelClass}>Horario de las clases en vivo</div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Hora</label>
+                  <input
+                    type="time"
+                    className={`${inputClass} mt-1.5`}
+                    value={draft.horaInicio}
+                    onChange={(e) => patch("horaInicio", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Días de la semana</label>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {DIAS_SEMANA.map((d) => {
+                      const activo = draft.diasSemana.includes(d.value);
+                      return (
+                        <button
+                          type="button"
+                          key={d.value}
+                          onClick={() =>
+                            patch(
+                              "diasSemana",
+                              activo ? draft.diasSemana.filter((v) => v !== d.value) : [...draft.diasSemana, d.value]
+                            )
+                          }
+                          className={`h-9 w-12 border text-[12px] font-medium transition-colors ${
+                            activo
+                              ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                              : "border-[var(--line2)] hover:border-[var(--accent)]"
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11.5px] leading-[1.5] text-[var(--faint)]">
+                Opcional. Con una sola cuenta de Zoom, dos cursos no pueden tener clase al mismo tiempo — revisá el
+                calendario antes de guardar.
+              </p>
+              <HorarioCalendar
+                diasSeleccionados={draft.diasSemana}
+                horaSeleccionada={draft.horaInicio}
+                fechaInicio={dmyToISO(draft.fecha) ?? ""}
+                fechaFin={draft.fechaFin || null}
+                clasesTotales={clasesTotales || null}
+                excludeCode={draft.origCode ?? undefined}
+                onElegirFecha={(fecha) => patch("fecha", isoToDMY(fecha))}
+              />
             </div>
           )}
 

@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import type { Course, PagoTipo } from "@/lib/types";
 import { formatARS } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
-import { todayISO } from "@/lib/date";
+import { todayISO, dmyToISO } from "@/lib/date";
+import { DIAS_SEMANA } from "@/lib/schedule";
+import { HorarioCalendar } from "@/components/calendar/HorarioCalendar";
 
 interface ModuleRowLite {
   id: number;
@@ -67,6 +69,8 @@ function PropuestaPendiente({
       cupoMinimo: number | null;
       fechaInicioIso: string | null;
       fechaFinIso: string | null;
+      diasSemana: number[] | null;
+      horaInicio: string | null;
     }
   ) => Promise<boolean>;
   onRechazar: (code: string, motivo: string) => Promise<boolean>;
@@ -78,8 +82,10 @@ function PropuestaPendiente({
   const [pagoValor, setPagoValor] = useState("35");
   const [cupoMaximo, setCupoMaximo] = useState("");
   const [cupoMinimo, setCupoMinimo] = useState("");
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+  const [fechaInicio, setFechaInicio] = useState(dmyToISO(course.fecha) ?? "");
+  const [fechaFin, setFechaFin] = useState(course.fechaFin ?? "");
+  const [diasSemana, setDiasSemana] = useState<number[]>(course.diasSemana ?? []);
+  const [horaInicio, setHoraInicio] = useState(course.horaInicio ?? "");
   const [rechazando, setRechazando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [trabajando, setTrabajando] = useState(false);
@@ -95,6 +101,8 @@ function PropuestaPendiente({
       cupoMinimo: course.modalidad === "cohorte" && cupoMinimo ? Number(cupoMinimo) : null,
       fechaInicioIso: course.modalidad === "cohorte" && fechaInicio ? fechaInicio : null,
       fechaFinIso: course.modalidad === "cohorte" && fechaFin ? fechaFin : null,
+      diasSemana: course.modalidad === "cohorte" && diasSemana.length > 0 ? diasSemana : null,
+      horaInicio: course.modalidad === "cohorte" && horaInicio ? horaInicio : null,
     });
     setTrabajando(false);
   }
@@ -180,6 +188,50 @@ function PropuestaPendiente({
               </>
             )}
           </div>
+
+          {course.modalidad === "cohorte" && (
+            <div className="mt-5 flex flex-col gap-4 border border-[var(--line2)] bg-[var(--surface2)] p-4">
+              <div className={labelClass}>Horario de las clases en vivo</div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Hora</label>
+                  <input type="time" className={`${inputClass} mt-1.5`} value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelClass}>Días de la semana</label>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {DIAS_SEMANA.map((d) => {
+                      const activo = diasSemana.includes(d.value);
+                      return (
+                        <button
+                          type="button"
+                          key={d.value}
+                          onClick={() =>
+                            setDiasSemana((prev) => (activo ? prev.filter((v) => v !== d.value) : [...prev, d.value]))
+                          }
+                          className={`h-9 w-12 border text-[12px] font-medium transition-colors ${
+                            activo
+                              ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                              : "border-[var(--line2)] hover:border-[var(--accent)]"
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <HorarioCalendar
+                diasSeleccionados={diasSemana}
+                horaSeleccionada={horaInicio}
+                fechaInicio={fechaInicio}
+                fechaFin={fechaFin || null}
+                clasesTotales={course.clasesTotales ?? null}
+                excludeCode={course.code}
+              />
+            </div>
+          )}
 
           <div className="mt-5 flex gap-3">
             <button
@@ -286,6 +338,8 @@ export function PropuestasTab({
       cupoMinimo: number | null;
       fechaInicioIso: string | null;
       fechaFinIso: string | null;
+      diasSemana: number[] | null;
+      horaInicio: string | null;
     }
   ) => Promise<boolean>;
   onRechazar: (code: string, motivo: string) => Promise<boolean>;

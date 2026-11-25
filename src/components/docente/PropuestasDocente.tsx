@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import type { Course, Modalidad } from "@/lib/types";
 import { formatARS } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
+import { DIAS_SEMANA } from "@/lib/schedule";
+import { HorarioCalendar } from "@/components/calendar/HorarioCalendar";
+import { dmyToISO } from "@/lib/date";
 
 interface ModuleRowLite {
   id: number;
@@ -23,6 +26,9 @@ interface EstructuraForm {
   duracion: string;
   clasesTotales: string;
   modulos: string[];
+  fechaInicio: string;
+  diasSemana: number[];
+  horaInicio: string;
 }
 
 function formVacio(primeraVertical: string): EstructuraForm {
@@ -34,6 +40,9 @@ function formVacio(primeraVertical: string): EstructuraForm {
     duracion: "",
     clasesTotales: "",
     modulos: [""],
+    fechaInicio: "",
+    diasSemana: [],
+    horaInicio: "",
   };
 }
 
@@ -46,6 +55,9 @@ function formDeCurso(course: Course, modulos: string[]): EstructuraForm {
     duracion: course.duracion,
     clasesTotales: course.clasesTotales != null ? String(course.clasesTotales) : "",
     modulos: modulos.length > 0 ? modulos : [""],
+    fechaInicio: dmyToISO(course.fecha) ?? "",
+    diasSemana: course.diasSemana ?? [],
+    horaInicio: course.horaInicio ?? "",
   };
 }
 
@@ -118,6 +130,72 @@ function EstructuraFields({
           </div>
         )}
       </div>
+
+      {form.modalidad === "cohorte" && (
+        <div className="flex flex-col gap-4 border border-[var(--line2)] bg-[var(--surface2)] p-4">
+          <div className={labelClass}>Horario de las clases en vivo</div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelClass}>Fecha de inicio</label>
+              <input
+                type="date"
+                className={`${inputClass} mt-1.5`}
+                value={form.fechaInicio}
+                onChange={(e) => patch("fechaInicio", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Hora</label>
+              <input
+                type="time"
+                className={`${inputClass} mt-1.5`}
+                value={form.horaInicio}
+                onChange={(e) => patch("horaInicio", e.target.value)}
+              />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Días de la semana</label>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {DIAS_SEMANA.map((d) => {
+                const activo = form.diasSemana.includes(d.value);
+                return (
+                  <button
+                    type="button"
+                    key={d.value}
+                    onClick={() =>
+                      patch(
+                        "diasSemana",
+                        activo ? form.diasSemana.filter((v) => v !== d.value) : [...form.diasSemana, d.value]
+                      )
+                    }
+                    className={`h-9 w-14 border text-[12.5px] font-medium transition-colors ${
+                      activo
+                        ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-ink)]"
+                        : "border-[var(--line2)] hover:border-[var(--accent)]"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="text-[11.5px] leading-[1.5] text-[var(--faint)]">
+            Es tentativo — administración puede ajustarlo al aprobar la propuesta. Revisá el calendario antes de
+            mandarla: con una sola cuenta de Zoom, dos cursos no pueden tener clase al mismo tiempo.
+          </p>
+          <HorarioCalendar
+            diasSeleccionados={form.diasSemana}
+            horaSeleccionada={form.horaInicio}
+            fechaInicio={form.fechaInicio}
+            fechaFin={null}
+            clasesTotales={form.clasesTotales ? Number(form.clasesTotales) : null}
+            onElegirFecha={(fecha) => patch("fechaInicio", fecha)}
+          />
+        </div>
+      )}
+
       <div>
         <label className={labelClass}>Módulos</label>
         <div className="mt-1.5 flex flex-col gap-2">
@@ -292,6 +370,9 @@ function PropuestaCard({
         duracion: form.duracion,
         clasesTotales: form.modalidad === "cohorte" ? Number(form.clasesTotales) : undefined,
         modulos: form.modulos,
+        fechaInicio: form.modalidad === "cohorte" ? form.fechaInicio || undefined : undefined,
+        diasSemana: form.modalidad === "cohorte" ? form.diasSemana : undefined,
+        horaInicio: form.modalidad === "cohorte" ? form.horaInicio || undefined : undefined,
       }),
     });
     const data = await res.json().catch(() => null);
@@ -309,6 +390,8 @@ function PropuestaCard({
       clasesTotales: form.modalidad === "cohorte" ? Number(form.clasesTotales) : null,
       estado: "propuesta",
       motivoRechazo: null,
+      diasSemana: form.modalidad === "cohorte" ? form.diasSemana : null,
+      horaInicio: form.modalidad === "cohorte" ? form.horaInicio || null : null,
     });
     setEditando(false);
   }
@@ -413,6 +496,9 @@ export function PropuestasDocente({
         duracion: form.duracion,
         clasesTotales: form.modalidad === "cohorte" ? Number(form.clasesTotales) : undefined,
         modulos: form.modulos,
+        fechaInicio: form.modalidad === "cohorte" ? form.fechaInicio : undefined,
+        diasSemana: form.modalidad === "cohorte" ? form.diasSemana : undefined,
+        horaInicio: form.modalidad === "cohorte" ? form.horaInicio : undefined,
       }),
     });
     const data = await res.json().catch(() => null);
@@ -430,7 +516,7 @@ export function PropuestasDocente({
       duracion: form.duracion,
       clasesTotales: form.modalidad === "cohorte" ? Number(form.clasesTotales) : null,
       precio: 0,
-      fecha: "A definir",
+      fecha: form.modalidad === "cohorte" && form.fechaInicio ? form.fechaInicio.split("-").reverse().join("/") : "A definir",
       docente: "",
       pagoTipo: "pct",
       pagoValor: 35,
@@ -438,6 +524,8 @@ export function PropuestasDocente({
       vendidos: 0,
       vistas: 0,
       estado: "propuesta",
+      diasSemana: form.modalidad === "cohorte" ? form.diasSemana : null,
+      horaInicio: form.modalidad === "cohorte" ? form.horaInicio : null,
     });
     setForm(formVacio(verticales[0] ?? ""));
     setMostrarForm(false);
@@ -448,7 +536,8 @@ export function PropuestasDocente({
     form.descripcion.trim().length >= 20 &&
     form.vertical &&
     form.duracion.trim() &&
-    (form.modalidad !== "cohorte" || Number(form.clasesTotales) > 0);
+    (form.modalidad !== "cohorte" ||
+      (Number(form.clasesTotales) > 0 && form.fechaInicio && form.diasSemana.length > 0 && form.horaInicio));
 
   return (
     <div className="border-t-2 border-[var(--line)] px-[34px] py-8">

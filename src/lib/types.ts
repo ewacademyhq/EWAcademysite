@@ -50,6 +50,10 @@ export interface Course {
   motivoRechazo?: string | null;
   /** Bio corta que carga el propio docente ("Red Team @ fintech") — null si nunca la cargó. */
   docenteBio?: string | null;
+  /** Días de clase en vivo (ISO 1=lunes..7=domingo), un horario semanal fijo — solo cohorte. Null si todavía no se cargó. */
+  diasSemana?: number[] | null;
+  /** Hora de inicio ("HH:MM"), vale para todos los días de `diasSemana` — solo cohorte. */
+  horaInicio?: string | null;
 }
 
 export interface CourseSession {

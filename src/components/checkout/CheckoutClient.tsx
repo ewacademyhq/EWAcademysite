@@ -9,6 +9,7 @@ import { formatARS } from "@/lib/format";
 import { calcularEdad } from "@/lib/date";
 import { VERSION_DOCUMENTOS_LEGALES } from "@/lib/legal";
 import { passwordValida, PASSWORD_REQUISITOS_MSG } from "@/lib/password";
+import { formatHorarioSemanal } from "@/lib/schedule";
 import { Toast } from "@/components/ui/Toast";
 import { createClient } from "@/lib/supabase/client";
 import { HCaptcha, type HCaptchaHandle } from "@/components/auth/HCaptcha";
@@ -52,8 +53,13 @@ export function CheckoutClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const modalidadLabel = course.modalidad === "cohorte" ? "Cohorte" : "Autogestionado";
+  const horario = formatHorarioSemanal(course.diasSemana, course.horaInicio);
   const fechaLabel =
-    course.fecha === "Inmediato" ? "ingreso inmediato" : `inicia ${course.fecha}`;
+    course.fecha === "Inmediato"
+      ? "ingreso inmediato"
+      : horario
+      ? `inicia ${course.fecha} · clases ${horario}`
+      : `inicia ${course.fecha}`;
 
   const disabled =
     !enrollmentEnabled ||

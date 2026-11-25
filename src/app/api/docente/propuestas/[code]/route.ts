@@ -11,6 +11,9 @@ interface PropuestaBody {
   duracion?: string;
   clasesTotales?: number;
   modulos?: string[];
+  fechaInicio?: string;
+  diasSemana?: number[];
+  horaInicio?: string;
 }
 
 function validar(body: PropuestaBody): string | null {
@@ -19,10 +22,25 @@ function validar(body: PropuestaBody): string | null {
   if (!body.vertical) return "Falta elegir una vertical.";
   if (body.modalidad !== "cohorte" && body.modalidad !== "continuo") return "Modalidad inválida.";
   if (!body.duracion || !body.duracion.trim()) return "Falta la duración.";
-  if (body.modalidad === "cohorte" && (!body.clasesTotales || body.clasesTotales <= 0)) {
-    return "Las clases totales son obligatorias para un curso de cohorte.";
+  if (body.modalidad === "cohorte") {
+    if (!body.clasesTotales || body.clasesTotales <= 0) {
+      return "Las clases totales son obligatorias para un curso de cohorte.";
+    }
+    if (!body.fechaInicio || !/^\d{4}-\d{2}-\d{2}$/.test(body.fechaInicio)) {
+      return "Falta la fecha de inicio de las clases en vivo.";
+    }
+    if (!body.diasSemana || body.diasSemana.length === 0 || body.diasSemana.some((d) => d < 1 || d > 7)) {
+      return "Elegí al menos un día de la semana para las clases en vivo.";
+    }
+    if (!body.horaInicio || !/^\d{2}:\d{2}$/.test(body.horaInicio)) {
+      return "Falta la hora de las clases en vivo.";
+    }
   }
   return null;
+}
+
+function esErrorDeChoqueDeHorario(mensaje: string): boolean {
+  return mensaje.includes("una sola cuenta de Zoom");
 }
 
 /** El docente edita una propuesta rechazada y la vuelve a mandar a revisión. */
@@ -64,10 +82,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       clases_totales: body.modalidad === "cohorte" ? body.clasesTotales : null,
       estado: "propuesta",
       motivo_rechazo: null,
+      fecha_inicio: body.modalidad === "cohorte" ? body.fechaInicio : null,
+      dias_semana: body.modalidad === "cohorte" ? body.diasSemana : null,
+      hora_inicio: body.modalidad === "cohorte" ? body.horaInicio : null,
     })
     .eq("code", code);
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: updateError.message },
+      { status: esErrorDeChoqueDeHorario(updateError.message) ? 409 : 500 }
+    );
   }
 
   const modulos = (body.modulos ?? []).map((titulo) => titulo.trim()).filter(Boolean);

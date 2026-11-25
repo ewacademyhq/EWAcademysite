@@ -231,8 +231,7 @@ export function DocenteClient({
     setNuevaFecha("");
     setNuevaMeetUrl("");
     setShowForm(false);
-    const base = esManual ? "Clase agendada con tu link" : "Clase agendada — reunión de Zoom creada";
-    flash(data.warning ? `${base}. ${data.warning}` : base);
+    flash(esManual ? "Clase agendada con tu link" : "Clase agendada — reunión de Zoom creada");
   }
 
   async function cancelarSesion(id: number) {
@@ -310,8 +309,7 @@ export function DocenteClient({
       body: JSON.stringify({ courseCode: data.course_code, titulo: data.titulo, fechaLabel }),
     }).catch(() => {});
 
-    const base = "Clase reprogramada. Los alumnos van a ver la nueva fecha al entrar al curso.";
-    flash(data.warning ? `${base} ${data.warning}` : base);
+    flash("Clase reprogramada. Los alumnos van a ver la nueva fecha al entrar al curso.");
   }
 
   async function guardarDrive() {

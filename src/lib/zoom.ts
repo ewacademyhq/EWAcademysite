@@ -1,12 +1,12 @@
 import "server-only";
+import { CLASE_DURACION_MIN } from "@/lib/schedule";
 
 const ZOOM_API = "https://api.zoom.us/v2";
 const ZOOM_OAUTH = "https://zoom.us/oauth/token";
 
-// Duración fija por ahora — no hay campo de duración en el form del docente.
-// Exportada para que el chequeo de superposición de horarios use el mismo
-// valor (ver src/lib/session-overlap.ts).
-export const DEFAULT_DURATION_MIN = 90;
+// Duración real de una clase (ver src/lib/schedule.ts — de ahí también toma
+// el chequeo de choque de horario, src/lib/session-overlap.ts).
+export const DEFAULT_DURATION_MIN = CLASE_DURACION_MIN;
 const ZOOM_TIMEZONE = "America/Argentina/Buenos_Aires";
 
 export function isZoomConfigured(): boolean {

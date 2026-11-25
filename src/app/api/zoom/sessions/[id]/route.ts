@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { deleteZoomMeeting, updateZoomMeeting } from "@/lib/zoom";
-import { findOverlappingSession, overlapWarning } from "@/lib/session-overlap";
+import { findScheduleConflict, scheduleConflictMessage } from "@/lib/session-overlap";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -28,12 +28,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const supabase = await createClient();
   const { data: existing, error: fetchError } = await supabase
     .from("course_sessions")
-    .select("id, zoom_meeting_id")
+    .select("id, course_code, zoom_meeting_id")
     .eq("id", id)
     .maybeSingle();
 
   if (fetchError || !existing) {
     return NextResponse.json({ error: "Clase no encontrada" }, { status: 404 });
+  }
+
+  // Una sola cuenta de Zoom para toda la academia — bloquea antes de tocar
+  // Zoom o la base si el nuevo horario choca con otra clase o con el
+  // patrón semanal de otro curso.
+  const conflict = await findScheduleConflict(supabase, fecha, existing.course_code, Number(id));
+  if (conflict) {
+    return NextResponse.json({ error: scheduleConflictMessage(conflict) }, { status: 409 });
   }
 
   // Si cargaron un link a mano, eso manda: no tocamos Zoom y la sesión pasa
@@ -73,8 +81,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: error?.message ?? "No se pudo reprogramar la clase" }, { status: 403 });
   }
 
-  const overlap = await findOverlappingSession(supabase, fecha, Number(id));
-  return NextResponse.json({ ...data, warning: overlap ? overlapWarning(overlap) : undefined });
+  return NextResponse.json(data);
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

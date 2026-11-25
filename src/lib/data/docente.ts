@@ -18,6 +18,7 @@ interface DocenteCourseRow {
   descripcion: string;
   precio: number;
   fecha_inicio: string | null;
+  fecha_fin: string | null;
   duracion: string;
   pago_tipo: PagoTipo;
   pago_valor: number;
@@ -28,6 +29,8 @@ interface DocenteCourseRow {
   clases_totales: number | null;
   estado: EstadoCurso;
   motivo_rechazo: string | null;
+  dias_semana: number[] | null;
+  hora_inicio: string | null;
 }
 
 function mapCourseRow(row: DocenteCourseRow, docente: string): Course {
@@ -48,13 +51,16 @@ function mapCourseRow(row: DocenteCourseRow, docente: string): Course {
     vistas: row.vistas,
     driveFolderUrl: row.drive_folder_url,
     clasesTotales: row.clases_totales,
+    fechaFin: row.fecha_fin,
     estado: row.estado,
     motivoRechazo: row.motivo_rechazo,
+    diasSemana: row.dias_semana,
+    horaInicio: row.hora_inicio ? row.hora_inicio.slice(0, 5) : null,
   };
 }
 
 const COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, vendidos, vistas, drive_folder_url, clases_totales, estado, motivo_rechazo";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, fecha_fin, duracion, pago_tipo, pago_valor, comision, vendidos, vistas, drive_folder_url, clases_totales, estado, motivo_rechazo, dias_semana, hora_inicio";
 
 /** Cursos a cargo del docente autenticado (RLS de courses ya es de lectura pública). */
 export async function getMyTeachingCourses(teacherId: string, teacherNombre: string): Promise<Course[]> {

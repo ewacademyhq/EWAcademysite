@@ -21,6 +21,8 @@ interface CourseRow {
   imagen_url: string | null;
   cupo_maximo: number | null;
   estado: EstadoCurso;
+  dias_semana: number[] | null;
+  hora_inicio: string | null;
   docente: { nombre: string; bio: string | null } | { nombre: string; bio: string | null }[] | null;
 }
 
@@ -64,11 +66,13 @@ function mapRow(row: CourseRow): Course {
     cupoMaximo: row.cupo_maximo,
     estado: row.estado,
     docenteBio: docenteBio(row),
+    diasSemana: row.dias_semana,
+    horaInicio: row.hora_inicio ? row.hora_inicio.slice(0, 5) : null,
   };
 }
 
 const COURSE_COLUMNS =
-  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, contenido_actualizado_at, vendidos, vistas, drive_folder_url, imagen_url, cupo_maximo, estado, docente:users!docente_id(nombre, bio)";
+  "code, vertical, modalidad, titulo, descripcion, precio, fecha_inicio, duracion, pago_tipo, pago_valor, comision, contenido_actualizado_at, vendidos, vistas, drive_folder_url, imagen_url, cupo_maximo, estado, dias_semana, hora_inicio, docente:users!docente_id(nombre, bio)";
 
 /** Catálogo público — excluye lo que no esté publicado, y los autogestionados que quedaron sin actualizar hace más de 6 meses (siguen accesibles para quien ya se matriculó, ver getCourseByCode). */
 export async function getCourses(): Promise<Course[]> {

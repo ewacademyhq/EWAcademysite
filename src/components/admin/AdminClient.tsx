@@ -61,6 +61,8 @@ function courseToRow(c: Course) {
     cupo_minimo: c.modalidad === "cohorte" ? c.cupoMinimo ?? null : null,
     drive_folder_url: c.driveFolderUrl ?? null,
     estado: c.estado,
+    dias_semana: c.modalidad === "cohorte" ? c.diasSemana ?? null : null,
+    hora_inicio: c.modalidad === "cohorte" ? c.horaInicio ?? null : null,
   };
 }
 
@@ -227,7 +229,7 @@ export function AdminClient({
         (a, b) => a.fecha.localeCompare(b.fecha)
       )
     );
-    flash(data.warning ? `Clase agendada. ${data.warning}` : "Clase agendada");
+    flash("Clase agendada");
   }
 
   async function editSesion(id: number, titulo: string, fecha: string, meetUrl: string | undefined) {
@@ -262,7 +264,7 @@ export function AdminClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ courseCode: data.course_code, titulo: data.titulo, fechaLabel }),
     }).catch(() => {});
-    flash(data.warning ? `Clase reprogramada. ${data.warning}` : "Clase reprogramada");
+    flash("Clase reprogramada");
   }
 
   async function cancelSesion(id: number) {
@@ -664,6 +666,8 @@ export function AdminClient({
       cupoMinimo: number | null;
       fechaInicioIso: string | null;
       fechaFinIso: string | null;
+      diasSemana: number[] | null;
+      horaInicio: string | null;
     }
   ): Promise<boolean> {
     const supabase = createClient();
@@ -678,6 +682,8 @@ export function AdminClient({
         cupo_minimo: terminos.cupoMinimo,
         fecha_inicio: terminos.fechaInicioIso,
         fecha_fin: terminos.fechaFinIso,
+        dias_semana: terminos.diasSemana,
+        hora_inicio: terminos.horaInicio,
         estado: "aprobada",
       })
       .eq("code", code);
@@ -698,6 +704,8 @@ export function AdminClient({
               cupoMinimo: terminos.cupoMinimo,
               fecha: terminos.fechaInicioIso ? isoToDMY(terminos.fechaInicioIso) : "A definir",
               fechaFin: terminos.fechaFinIso,
+              diasSemana: terminos.diasSemana,
+              horaInicio: terminos.horaInicio,
               estado: "aprobada",
             }
           : c

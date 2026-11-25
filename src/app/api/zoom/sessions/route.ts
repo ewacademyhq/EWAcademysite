@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createZoomMeeting, deleteZoomMeeting, isZoomConfigured } from "@/lib/zoom";
-import { findOverlappingSession, overlapWarning } from "@/lib/session-overlap";
+import { findScheduleConflict, scheduleConflictMessage } from "@/lib/session-overlap";
 
 /**
  * Agenda una clase. Si viene `meetUrl` en el body (el docente/admin cargó un
@@ -35,10 +35,13 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createClient();
 
-  // Una sola cuenta de Zoom para toda la academia — avisamos si se pisa con
-  // otra clase ya agendada (de cualquier curso), pero no bloqueamos.
-  const overlap = await findOverlappingSession(supabase, fecha);
-  const warning = overlap ? overlapWarning(overlap) : undefined;
+  // Una sola cuenta de Zoom para toda la academia — bloquea si se pisa con
+  // otra clase ya agendada (de cualquier curso) o con el patrón semanal de
+  // otro curso de cohorte.
+  const conflict = await findScheduleConflict(supabase, fecha, courseCode);
+  if (conflict) {
+    return NextResponse.json({ error: scheduleConflictMessage(conflict) }, { status: 409 });
+  }
 
   if (meetUrlManual) {
     const { data, error } = await supabase
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest) {
     if (error || !data) {
       return NextResponse.json({ error: error?.message ?? "No se pudo agendar la clase" }, { status: 403 });
     }
-    return NextResponse.json({ ...data, warning });
+    return NextResponse.json(data);
   }
 
   if (!isZoomConfigured()) {
@@ -90,5 +93,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error?.message ?? "No se pudo agendar la clase" }, { status: 403 });
   }
 
-  return NextResponse.json({ ...data, warning });
+  return NextResponse.json(data);
 }
